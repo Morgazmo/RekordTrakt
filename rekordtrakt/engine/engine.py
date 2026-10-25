@@ -18,7 +18,7 @@ import heapq
 from collections import deque
 from dataclasses import dataclass, field
 
-from rekordtrakt.devices.base import PRESS, RELEASE, TURN, VALUE, Event
+from rekordtrakt.devices.base import DEFAULT_DECK_SLOTS, DEFAULT_FX_SLOTS, PRESS, RELEASE, TURN, VALUE, Event
 from rekordtrakt.engine import actions as user_actions
 from rekordtrakt.engine.behaviours import CfxGroup, CfxKnob, Knob, ModifierTap
 from rekordtrakt.engine.labels import OPTION_INFO, OPTION_WHEN, describe, knob_default, short
@@ -35,7 +35,7 @@ class Profile:
     leds: dict = field(default_factory=dict)         # "control" or "control@tag" -> Ref whose feedback drives it
     mode_leds: dict = field(default_factory=dict)    # tag -> {control: value or fn(eng, dev, half)}; overrides
     tags: object = None                              # fn(dev, half) -> list of active tags, highest priority first
-    reassignable: bool = False                       # setup mode may move a half to any deck 1-4 / FX unit 1-2
+    reassignable: bool = True                        # its decks and FX units can be moved (window, setup mode)
     default_modes: dict = field(default_factory=dict)
     default_options: dict = field(default_factory=dict)  # filled into each device's options at start-up
     combo_taps: dict = field(default_factory=dict)   # frozenset of modifier names -> Behaviour, fired when they're
@@ -69,9 +69,30 @@ class DeviceConfig:
     def halves(self):
         return ("L", "R") if self.device.has_halves else (None,)
 
+    def deck_slots(self):
+        """A unit without halves: the decks it drives, [{key, label, default?}] (none for a unit with halves)."""
+        return () if self.device.has_halves else getattr(self.device, "deck_slots", DEFAULT_DECK_SLOTS)
+
+    def fx_slots(self):
+        return () if self.device.has_halves else getattr(self.device, "fx_slots", DEFAULT_FX_SLOTS)
+
+    def deck_keys(self):
+        """The deck keys this device's bindings may use: a half's own "deck", its slots' keys, or a fixed deck."""
+        own = ("deck",) if self.device.has_halves else tuple(s["key"] for s in self.deck_slots())
+        return own + ("d1", "d2", "d3", "d4")
+
+    @staticmethod
+    def _at(values, i, default):
+        return values[i] if i < len(values) else default
+
     def context(self, half, deck=None, fx=None, bank=None):
-        if half is None:
-            ctx = {"a": self.decks[0], "b": self.decks[1], "fx": self.fx_units[0], "_pos": self.position, "_half": None}
+        if half is None:                         # deck / fx given: every slot on that one (possible_contexts)
+            ctx = {"_pos": self.position, "_half": None}
+            for i, s in enumerate(self.deck_slots()):
+                ctx[s["key"]] = deck or self._at(self.decks, i, s.get("default", i + 1))
+            for i, s in enumerate(self.fx_slots()):
+                ctx[s["key"]] = fx or self._at(self.fx_units, i, s.get("default", 1))
+            ctx.setdefault("fx", fx or self._at(self.fx_units, 0, 1))
             ctx.update({f"d{n}": n for n in range(1, 5)})
             return ctx
         i = ("L", "R").index(half)
@@ -86,7 +107,12 @@ class DeviceConfig:
         """Every context this device could be in, so the bridge mapping covers all of them."""
         for half in self.halves():
             if half is None:
-                yield half, self.context(half)
+                if not reassignable:
+                    yield half, self.context(half)
+                    continue
+                for deck in range(1, 5):
+                    for fx in (1, 2):
+                        yield half, self.context(half, deck, fx)
                 continue
             decks = range(1, 5) if reassignable else (self.decks[("L", "R").index(half)],)
             fxs = (1, 2) if reassignable else (self.fx_units[("L", "R").index(half)],)
@@ -160,7 +186,7 @@ class Engine:
         self.cancel_waiting(dev.position)     # steps from bindings that are about to be replaced
         profile = self.profile(dev)
         mine = user_actions.compile_bindings(dev.mapping, self.control_kinds(dev), profile.page_controls,
-                                             [layer for layer, _ in self.edit_layers(dev)][:2])
+                                             [layer for layer, _ in self.edit_layers(dev)][:2], dev.deck_keys())
         self.bound[dev.position] = {**profile.bindings, **mine}
         self.dev_leds[dev.position] = {**profile.leds, **user_actions.feedback_leds(dev.mapping)}
 
@@ -182,7 +208,7 @@ class Engine:
         if page is not None and page not in self.pages(dev, enabled_only=False):
             raise ValueError(f"no page '{page}'")
         if action is not None:
-            user_actions.build(action, kinds[control])            # refuse what can't work before saving it
+            user_actions.build(action, kinds[control], dev.deck_keys())     # refuse what can't work before saving
         bindings = [e for e in dev.mapping["bindings"]
                     if not (e.get("layer") == layer and e.get("page") == page and e.get("control") == control)]
         if action is not None:
@@ -229,7 +255,7 @@ class Engine:
         kinds = self.control_kinds(dev)
         for e in m["bindings"]:
             if e.get("control") in kinds:
-                user_actions.build(e["action"], kinds[e["control"]])
+                user_actions.build(e["action"], kinds[e["control"]], dev.deck_keys())
         for p in m["pages"]:
             user_actions.check_name(p.get("name"))
         dev.mapping = m
@@ -263,7 +289,8 @@ class Engine:
             layers.append({"layer": layer, "label": label, "mine": mine,
                            "preset": {"label": preset[0], "detail": preset[1]} if preset else None})
         return {"position": position, "control": control, "kind": kinds[control], "page": page,
-                "page_bound": page_bound, "half": half, "deck": ctx.get("deck"), "layers": layers}
+                "page_bound": page_bound, "half": half, "deck": ctx.get("deck"), "layers": layers,
+                "slots": [[s["key"], s["label"], ctx[s["key"]]] for s in dev.deck_slots()]}
 
     def playing_decks(self):
         """Decks Rekordbox reports as playing (from its feedback), e.g. before asking Rekordbox to close."""
@@ -536,16 +563,24 @@ class Engine:
         self.notice(f"{position} {half or ''} {key} = {value}")
         self.refresh_leds(position)
 
-    def assign(self, position, half, deck=None, fx=None):
+    def assign(self, position, half=None, deck=None, fx=None, slot=None):
+        """Moves a half to `deck` and/or FX unit `fx`; on a unit without halves, deck slot or FX slot number `slot`
+        (whichever of deck / fx is given)."""
         dev = self.devices[position]
-        i = ("L", "R").index(half)
         self.cancel_waiting(position, half)
-        if deck is not None:
-            dev.decks[i] = deck
-        if fx is not None:
-            dev.fx_units[i] = fx
+        if half is not None:
+            i = dev.halves().index(half)
+            what = f"{half}: "
+        else:
+            i = slot
+            what = f"{(dev.deck_slots() if deck is not None else dev.fx_slots())[slot]['label']}: "
+        for values, value in ((dev.decks, deck), (dev.fx_units, fx)):
+            if value is not None:
+                while len(values) <= i:                 # a definition that gained a slot: fill up to it
+                    values.append(len(values) + 1)
+                values[i] = value
         self.view_version += 1
-        self.notice(f"{position} {half}: deck {dev.decks[i]}, FX unit {dev.fx_units[i]}")
+        self.notice(f"{dev.name} {what}" + (f"deck {deck}" if deck is not None else f"FX unit {fx}"))
         self._rebuild_led_sources()
         self.refresh_leds(position)
         self.on_config_change(dev)
@@ -598,6 +633,21 @@ class Engine:
                 self.set_mode(position, half, "page", pages[0])
 
     # --- main window ----------------------------------------------------------------------------------
+    @staticmethod
+    def _assign_rows(dev):
+        """What Settings offers to move: a half's deck and FX unit together, or each deck and FX slot of a unit
+        without halves. Each item says how to send the change ({"half"} or {"slot"}) and what it is now."""
+        if dev.device.has_halves:
+            return [{"label": f"{'Left' if half == 'L' else 'Right'} deck", "help": "Its deck and FX unit.",
+                     "items": [{"half": half, "kind": "deck", "value": dev.decks[i]},
+                               {"half": half, "kind": "fx", "value": dev.fx_units[i]}]}
+                    for i, half in enumerate(dev.halves())]
+        ctx = dev.context(None)
+        return ([{"label": s["label"], "items": [{"slot": i, "kind": "deck", "value": ctx[s["key"]]}]}
+                 for i, s in enumerate(dev.deck_slots())] +
+                [{"label": s["label"], "items": [{"slot": i, "kind": "fx", "value": ctx[s["key"]]}]}
+                 for i, s in enumerate(dev.fx_slots())])
+
     def view(self):
         """What every control does right now, per device and half: deck, FX unit, page, held modifiers, and per
         control its label on the current layer (and with Shift), LED, knob position and pickup."""
@@ -614,6 +664,7 @@ class Engine:
                "mapping": profile.title or dev.profile or dev.device.type_name,
                "profile": dev.profile or dev.device.type_name,
                "decks": list(dev.decks), "fx_units": list(dev.fx_units), "reassignable": profile.reassignable,
+               "assign": self._assign_rows(dev),
                "pages": self.pages(dev) if profile.pages else [],
                "all_pages": self.pages(dev, enabled_only=False) if profile.pages else [],
                "builtin_pages": list(profile.pages), "custom_pages": user_actions.page_ids(dev.mapping),
@@ -634,7 +685,9 @@ class Engine:
             mods = self.modifiers.get((dev.position, half), {})
             layer = "+".join(sorted(mods)) if mods else None
             h = {"half": half, "deck": ctx.get("deck"), "fx": ctx["fx"],
-                 "decks": None if half else [ctx["a"], ctx["b"]], "modes": dict(dev.modes.get(half, {})),
+                 "decks": None if half else [ctx[s["key"]] for s in dev.deck_slots()],
+                 "slots": [{"key": s["key"], "label": s["label"], "deck": ctx[s["key"]]} for s in dev.deck_slots()],
+                 "modes": dict(dev.modes.get(half, {})),
                  "tags": self.tags(dev, half), "held": sorted(mods),
                  "layer": profile.modifier_names.get(layer, layer) if layer else None, "controls": {},
                  "rows": list(profile.row_titles.get(dev.modes.get(half, {}).get("page"), []))}

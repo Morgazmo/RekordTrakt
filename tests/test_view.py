@@ -317,6 +317,18 @@ class LiveSettings(unittest.TestCase):
             self.t.assign("x1_left", "L", deck=7)
         with self.assertRaises(ValueError):
             self.t.set_page("nowhere", "L", "fx")
+        with self.assertRaises(ValueError):
+            self.t.assign("f1_left", deck=2, slot=5)             # the F1 has two deck slots
+        with self.assertRaises(ValueError):
+            self.t.assign("f1_left", deck=2, fx=1, slot=0)       # one at a time
+        with self.assertRaises(ValueError):
+            self.t.assign("x1_left", deck=2, slot=0)             # an X1 is moved by half
+
+    def test_an_f1_is_moved_by_slot(self):
+        self.t.assign("f1_left", deck=4, slot=1)
+        self.t.assign("f1_left", fx=2, slot=0)
+        dev = self.t.call(lambda eng: eng.devices["f1_left"])
+        self.assertEqual((dev.decks, dev.fx_units), ([1, 4], [2]))
 
     def test_bypass_releases_then_sends_nothing(self):
         app = self.rig["bridge"]["app_port"]

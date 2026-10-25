@@ -143,17 +143,17 @@ function devicePage(dev) {
   name.setAttribute("aria-label", "Name");
   name.onchange = () => { if (name.value.trim()) change("rename", { position: dev.position, name: name.value.trim() }, "Renamed"); };
   const general = [row("Name", null, name)];
-  if (dev.halves.length > 1) {
-    dev.halves.forEach((h, i) => {
-      const side = h.half === "L" ? "Left deck" : "Right deck";
-      general.push(row(side, "Its deck and FX unit.",
-        select([1, 2, 3, 4].map((d) => [d, `Deck ${d}`]), dev.decks[i], !dev.reassignable,
-          (deck) => change("assign", { position: dev.position, half: h.half, deck }, `Deck ${deck}`), side, "pair"),
-        select([1, 2].map((u) => [u, `FX unit ${u}`]), dev.fx_units[i], !dev.reassignable,
-          (fx) => change("assign", { position: dev.position, half: h.half, fx }, `FX unit ${fx}`), `${side} FX unit`, "pair")));
-    });
-  } else {
-    general.push(row("Decks", null, tag(`Decks ${dev.decks.join(" and ")}`)), row("FX unit", null, tag(`FX unit ${dev.fx_units[0]}`)));
+  // What this controller drives, as its definition describes it: a half's deck and FX unit together (a pair of
+  // dropdowns), or each deck and FX unit of a controller without halves on its own row.
+  for (const r of dev.assign || []) {
+    general.push(row(r.label, r.help || null, ...r.items.map((it) => {
+      const deck = it.kind === "deck";
+      const where = it.half ? { half: it.half } : { slot: it.slot };
+      return select(deck ? [1, 2, 3, 4].map((d) => [d, `Deck ${d}`]) : [1, 2].map((u) => [u, `FX unit ${u}`]),
+        it.value, !dev.reassignable,
+        (v) => change("assign", { position: dev.position, ...where, [it.kind]: v }, deck ? `Deck ${v}` : `FX unit ${v}`),
+        r.items.length > 1 && !deck ? `${r.label} FX unit` : r.label, r.items.length > 1 ? "pair" : null);
+    })));
   }
   const left = [card("General", ...general)];
   if (dev.all_pages.length) left.push(pagesCard(dev));

@@ -68,7 +68,12 @@ def with_device(rig, port, type_name, mapping=None, unit=None):
     while position in rig.setdefault("devices", {}):
         n += 1
         position = f"{type_name}_{n}"
-    entry = {"type": type_name, "port": port, "decks": [1, 2], "fx_units": [1, 2] if device.has_halves else [1],
+    if device.has_halves:
+        decks, fx_units = [1, 2], [1, 2]
+    else:
+        decks = [s.get("default", i + 1) for i, s in enumerate(getattr(device, "deck_slots", ()))]
+        fx_units = [s.get("default", 1) for s in getattr(device, "fx_slots", ())]
+    entry = {"type": type_name, "port": port, "decks": decks, "fx_units": fx_units,
              "name": device.display_name + (f" {n}" if n > 1 else ""), "profile": PRESETS.get(type_name, "")}
     if mapping and (mapping.get("bindings") or mapping.get("pages")):
         entry["mapping"] = mapping

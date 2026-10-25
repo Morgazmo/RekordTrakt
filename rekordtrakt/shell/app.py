@@ -106,7 +106,8 @@ def settings_actions(translator):
     translator() returns the current one (the watchdog replaces it on restart)."""
     return {
         "option": lambda body: translator().set_option(body["position"], body["key"], body["value"]),
-        "assign": lambda body: translator().assign(body["position"], body["half"], body.get("deck"), body.get("fx")),
+        "assign": lambda body: translator().assign(body["position"], body.get("half"), body.get("deck"), body.get("fx"),
+                                                   body.get("slot")),
         "pages": lambda body: translator().set_pages(body["position"], body["pages"], body.get("order")),
         "page": lambda body: translator().set_page(body["position"], body["half"], body["page"]),
         "rename": lambda body: translator().rename(body["position"], body["name"]),

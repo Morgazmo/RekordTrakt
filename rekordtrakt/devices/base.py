@@ -3,6 +3,14 @@ from dataclasses import dataclass
 
 PRESS, RELEASE, TURN, VALUE = "press", "release", "turn", "value"
 
+# What a controller without halves is assigned to, unless its definition says otherwise: two decks and an FX unit.
+# Bindings name them by key ("a"); Settings and the controller's card let you move each one.
+DEFAULT_DECK_SLOTS = ({"key": "a", "label": "First deck", "default": 1},
+                      {"key": "b", "label": "Second deck", "default": 2})
+DEFAULT_FX_SLOTS = ({"key": "fx", "label": "FX unit", "default": 1},)
+# Context keys a slot can't take: a half's own deck and FX unit, fixed decks, hot cue numbers, the engine's own.
+RESERVED_KEYS = {"deck", "fx", "d1", "d2", "d3", "d4", "hc1", "hc2", "hc3", "hc4", "_pos", "_half"}
+
 
 @dataclass(frozen=True)
 class Event:

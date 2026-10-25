@@ -210,14 +210,23 @@ class Translator:
             eng.set_option(position, key, value)
         return self.call(run)
 
-    def assign(self, position, half, deck=None, fx=None):
+    def assign(self, position, half=None, deck=None, fx=None, slot=None):
+        """A half's deck and/or FX unit; or, on a unit without halves, one deck slot or FX slot (`slot`)."""
         def run(eng):
             dev = _device(eng, position)
-            if not eng.profile(dev).reassignable or half not in ("L", "R"):
-                raise ValueError(f"{position} can't be reassigned")
+            if not eng.profile(dev).reassignable:
+                raise ValueError(f"{dev.name} can't be reassigned")
             if (deck is not None and deck not in (1, 2, 3, 4)) or (fx is not None and fx not in (1, 2)):
                 raise ValueError("deck must be 1-4 and FX unit 1-2")
-            eng.assign(position, half, deck=deck, fx=fx)
+            if half is not None:
+                if half not in dev.halves():
+                    raise ValueError(f"{dev.name} has no half '{half}'")
+            else:
+                slots = dev.deck_slots() if deck is not None else dev.fx_slots()
+                if dev.device.has_halves or (deck is None) == (fx is None) or not isinstance(slot, int) \
+                        or not 0 <= slot < len(slots):
+                    raise ValueError(f"choose one of {dev.name}'s decks or FX units")
+            eng.assign(position, half, deck=deck, fx=fx, slot=slot)
         return self.call(run)
 
     def set_pages(self, position, pages, order=None):

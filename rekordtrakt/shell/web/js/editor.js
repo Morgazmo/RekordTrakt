@@ -68,7 +68,7 @@ function defaultDo() { return "function"; }
 function blankItem() {
   return { function: null, deck: info && info.half !== undefined ? defaultDeck() : "deck" };
 }
-function defaultDeck() { return info.half ? "deck" : "a"; }
+function defaultDeck() { return info.half ? "deck" : ((info.slots || [])[0] || ["d1"])[0]; }
 
 // What a control of this kind can take, for each part of an action.
 function allowed(kinds) {
@@ -84,7 +84,8 @@ function allowed(kinds) {
 
 function deckOptions(scope) {
   if (scope !== "deck") return null;
-  const out = info.half ? [["deck", `This deck (${info.deck})`]] : [["a", "First deck"], ["b", "Second deck"]];
+  const out = info.half ? [["deck", `This deck (${info.deck})`]]
+    : (info.slots || []).map(([key, label, deck]) => [key, `${label} (${deck})`]);    // follow the controller's decks
   for (const n of [1, 2, 3, 4]) out.push([`d${n}`, `Deck ${n}`]);
   return out;
 }
@@ -307,7 +308,9 @@ function guessMinus(name) {
 
 function summary(a) {
   const label = (n) => (fnInfo(n) || { label: n }).label;
-  const deck = (d) => !d ? "" : d === "deck" ? "" : d === "a" ? " (first deck)" : d === "b" ? " (second deck)" : ` (deck ${d.slice(1)})`;
+  const slot = (d) => ((info && info.slots) || []).find(([key]) => key === d);
+  const deck = (d) => !d || d === "deck" ? "" : slot(d) ? ` (${slot(d)[1].toLowerCase()})`
+    : /^d[1-4]$/.test(d) ? ` (deck ${d.slice(1)})` : "";
   if (a.do === "nothing") return "Nothing";
   if (a.do === "function") return `${label(a.function)}${deck(a.deck)}${a.minus ? ` / ${label(a.minus)}` : ""}`;
   if (a.do === "value") return `${label(a.function)}${deck(a.deck)} = ${a.value}${a.release != null ? `, then ${a.release}` : ""}`;

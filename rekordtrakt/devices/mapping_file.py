@@ -36,6 +36,7 @@ DECK_KEYS = {
 BEATLOOP_SIZES = {"0.0625": "1_16", "0.125": "1_8", "0.25": "1_4", "0.5": "1_2", "1": "1", "2": "2", "4": "4", "8": "8"}
 EQ_PARAMETERS = {"parameter3": "EQHigh", "parameter2": "EQMid", "parameter1": "EQLow"}
 RELATIVE_OPTIONS = {"selectknob", "diff", "spread64", "relative"}
+ORDINALS = ("First", "Second", "Third", "Fourth")
 
 
 class MappingFileError(ValueError):
@@ -162,6 +163,14 @@ def to_rekordtrakt(xml_text, port_name=""):
             script.append(c["description"] or c["key"])
     if not controls:
         raise MappingFileError("that mapping has no MIDI controls RekordTrakt can read")
+    # Each deck the file drives becomes a deck slot (first, second...) starting on that deck, so moving it in the
+    # window moves every control that drove it.
+    channels = sorted({int(bnd["action"]["deck"][1:]) for bnd in bindings if bnd["action"].get("deck")})
+    slot_keys = {f"d{n}": "abcd"[i] for i, n in enumerate(channels)}
+    for bnd in bindings:
+        if bnd["action"].get("deck"):
+            bnd["action"]["deck"] = slot_keys[bnd["action"]["deck"]]
+    deck_slots = [{"key": "abcd"[i], "label": f"{ORDINALS[i]} deck", "default": n} for i, n in enumerate(channels)]
     # The id names the controller and fingerprints its messages: a different file with the same name is a new
     # controller type, never a silent change to one that's in use; the same file again is the same type.
     messages = sorted((c["in"]["msg"], c["in"]["ch"], c["in"]["num"]) for c in controls)
@@ -170,7 +179,8 @@ def to_rekordtrakt(xml_text, port_name=""):
     by = f" by {m['author']}" if m["author"] else ""
     definition = {"schema": 1, "type": type_name, "name": m["name"][:40], "maker": m["name"].split()[0],
                   "midi_mode": f"as in its mapping file{by}",
-                  "port_hints": [p for p in [port_name, m["name"]] if p], "halves": [], "shift": {"style": "none"},
+                  "port_hints": [p for p in [port_name, m["name"]] if p], "halves": [], "deck_slots": deck_slots,
+                  "fx_slots": [], "shift": {"style": "none"},
                   "led_interval": 0.005, "led_values": "on_off", "controls": controls,
                   "layout": _grid(controls), "source": f"imported from a .midi.xml mapping{by}"}
     report = {"controls": len(controls), "mapped": translated, "scripted": sorted(set(script))[:40]}

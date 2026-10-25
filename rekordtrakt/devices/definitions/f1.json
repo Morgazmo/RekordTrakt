@@ -8,6 +8,13 @@
   "F1"
  ],
  "halves": [],
+ "deck_slots": [
+  {"key": "a", "label": "First deck", "default": 1},
+  {"key": "b", "label": "Second deck", "default": 2}
+ ],
+ "fx_slots": [
+  {"key": "fx", "label": "FX unit", "default": 1}
+ ],
  "shift": {
   "style": "none",
   "note": "Shift sends nothing in MIDI mode"

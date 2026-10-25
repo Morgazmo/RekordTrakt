@@ -13,7 +13,8 @@ A device's mapping is data (kept in the rig file next to its decks and options),
 Actions (what a control does), checked against the action registry and the control's kind:
 
   {"do": "function", "function": "PlayPause", "deck": "deck"}     one function. deck: "deck" (this half's deck),
-        "a"/"b" (an F1's first/second deck), "d1".."d4" (a fixed deck), or absent for global functions. An encoder
+        a deck slot's key on a unit without halves ("a"/"b": an F1's first/second deck), "d1".."d4" (a fixed
+        deck), or absent for global functions. An encoder
         bound to a button function also needs "minus" (the function for anticlockwise, e.g. Jump4Fwd / Jump4Prev).
   {"do": "functions", "items": [{"function": ..., "deck": ..., "from": 0, "to": 127}, ...]}
         several at once: buttons press them together; a knob drives each over its own range (to < from inverts).
@@ -28,7 +29,7 @@ import re
 from rekordtrakt.engine import behaviours as b
 from rekordtrakt.rekordbox import registry
 
-DECK_KEYS = ("deck", "a", "b", "d1", "d2", "d3", "d4")
+DECK_KEYS = ("deck", "a", "b", "d1", "d2", "d3", "d4")       # the default: an X1 half's or an F1's
 BUTTON_TYPES = {"Button", "Pad"}
 VALUE_TYPES = {"KnobSlider", "KnobSliderHiRes"}
 TURN_TYPES = {"Rotary"}
@@ -39,7 +40,7 @@ class MappingError(ValueError):
     pass
 
 
-def _function(spec, scope_check=True):
+def _function(spec, decks=DECK_KEYS, scope_check=True):
     name = spec.get("function")
     f = registry.BY_NAME.get(name)
     if f is None:
@@ -48,16 +49,16 @@ def _function(spec, scope_check=True):
         raise MappingError(f"{f.label} is a light Rekordbox reports, not something to send")
     deck = spec.get("deck")
     if f.scope == "deck":
-        if deck not in DECK_KEYS:
+        if deck not in decks:
             raise MappingError(f"{f.label} needs a deck")
     elif deck is not None and scope_check:
         raise MappingError(f"{f.label} isn't per deck")
     return f, (deck if f.scope == "deck" else None)
 
 
-def _single(spec, kind):
+def _single(spec, kind, decks=DECK_KEYS):
     """One function as a behaviour for a control of `kind` (button, knob, fader, encoder)."""
-    f, deck = _function(spec)
+    f, deck = _function(spec, decks)
     if kind == "button":
         if f.rb_type in BUTTON_TYPES:
             return b.Button(f.name, deck)
@@ -77,7 +78,7 @@ def _single(spec, kind):
             minus = spec.get("minus")
             if not minus:
                 raise MappingError(f"{f.label} on an encoder also needs a function for turning the other way")
-            g, _ = _function({"function": minus, "deck": spec.get("deck")})
+            g, _ = _function({"function": minus, "deck": spec.get("deck")}, decks)
             if g.rb_type not in BUTTON_TYPES:
                 raise MappingError(f"{g.label} can't be a turn step")
             return b.Split(f.name, g.name, deck)
@@ -91,8 +92,9 @@ def _value(v):
     return v
 
 
-def build(action, kind):
-    """The behaviour for a saved action on a control of `kind`; raises MappingError if it can't work."""
+def build(action, kind, decks=DECK_KEYS):
+    """The behaviour for a saved action on a control of `kind`; raises MappingError if it can't work. `decks`: the
+    deck keys the controller has (Device.deck_keys)."""
     if not isinstance(action, dict):
         raise MappingError("an action is an object")
     do = action.get("do")
@@ -101,7 +103,7 @@ def build(action, kind):
     if do in ("function", "value"):
         if do == "value" and kind != "button":
             raise MappingError("only a button can set a value")
-        return _single(action, kind)
+        return _single(action, kind, decks)
     if do == "functions":
         items = action.get("items") or []
         if not 1 <= len(items) <= MAX_ITEMS:
@@ -109,13 +111,13 @@ def build(action, kind):
         if kind in ("knob", "fader"):
             targets = []
             for item in items:
-                f, deck = _function(item)
+                f, deck = _function(item, decks)
                 if f.rb_type not in VALUE_TYPES:
                     raise MappingError(f"{f.label} can't follow a {kind}")
                 targets.append((b.Ref(f.name, deck), _value(item.get("from", 0)), _value(item.get("to", 127)),
                                 f.rb_type == "KnobSliderHiRes"))
             return b.MultiKnob(targets)
-        return b.Group([_single(item, kind) for item in items])
+        return b.Group([_single(item, kind, decks) for item in items])
     if do == "sequence":
         if kind != "button":
             raise MappingError("only a button can run a sequence")
@@ -127,7 +129,7 @@ def build(action, kind):
             wait = step.get("wait", 0)
             if not isinstance(wait, (int, float)) or not 0 <= wait <= MAX_WAIT:
                 raise MappingError(f"waits go from 0 to {MAX_WAIT:g} seconds")
-            out.append((float(wait), _single(step, "button")))
+            out.append((float(wait), _single(step, "button", decks)))
         return b.Sequence(out)
     raise MappingError(f"unknown action '{do}'")
 
@@ -166,7 +168,7 @@ def check_name(name):
     return name
 
 
-def compile_bindings(mapping, kinds, page_controls, layers=("base", "shift")):
+def compile_bindings(mapping, kinds, page_controls, layers=("base", "shift"), decks=DECK_KEYS):
     """{(layer key, control): behaviour} for a device's saved mapping. kinds: control id -> kind. Custom pages start
     blank: their page controls do nothing on the base and Shift layers until bound."""
     m = normalise(mapping)
@@ -181,7 +183,7 @@ def compile_bindings(mapping, kinds, page_controls, layers=("base", "shift")):
         if kind is None:
             continue                         # a control this device doesn't have (an import from another model)
         try:
-            out[(layer_key(entry.get("layer", "base"), entry.get("page")), control)] = build(entry["action"], kind)
+            out[(layer_key(entry.get("layer", "base"), entry.get("page")), control)] = build(entry["action"], kind, decks)
         except (MappingError, KeyError):
             continue                         # unusable after an update: the preset's binding stays
     return out

@@ -72,13 +72,16 @@ class Import(unittest.TestCase):
     def test_controls_with_a_rekordbox_equivalent_are_mapped_to_the_right_deck(self):
         got = {next(c["name"] for c in self.definition["controls"] if c["id"] == b["control"]):
                (b["action"]["function"], b["action"].get("deck")) for b in self.mapping["bindings"]}
-        self.assertEqual(got["Play (left)"], ("PlayPause", "d1"))
-        self.assertEqual(got["Play (right)"], ("PlayPause", "d2"))
-        self.assertEqual(got["Cue (left)"], ("Cue", "d1"))
-        self.assertEqual(got["Volume (left)"], ("ChannelFader", "d1"))
-        self.assertEqual(got["Low (left)"], ("EQLow", "d1"))
+        # Each deck the file drives is a deck slot of its own, starting on that deck, so it can be moved.
+        self.assertEqual(self.definition["deck_slots"], [{"key": "a", "label": "First deck", "default": 1},
+                                                         {"key": "b", "label": "Second deck", "default": 2}])
+        self.assertEqual(got["Play (left)"], ("PlayPause", "a"))
+        self.assertEqual(got["Play (right)"], ("PlayPause", "b"))
+        self.assertEqual(got["Cue (left)"], ("Cue", "a"))
+        self.assertEqual(got["Volume (left)"], ("ChannelFader", "a"))
+        self.assertEqual(got["Low (left)"], ("EQLow", "a"))
         self.assertEqual(got["Browse"], ("Browse", None))
-        self.assertIn(("PAD1_HotCue", "d1"), got.values())
+        self.assertIn(("PAD1_HotCue", "a"), got.values())
         self.assertEqual(self.report["mapped"], 8)
         self.assertIn("Jog (left)", self.report["scripted"])
 
@@ -137,9 +140,17 @@ class AddingControllers(unittest.TestCase):
         for d in devices:
             leds.add_device(d.position, d.device, Out())
         engine = Engine(devices, PROFILES, BridgeClient(Out(), manifest), leds, lambda: 0.0, log=lambda *_: None)
+        self.assertEqual((entry["decks"], entry["fx_units"]), ([1, 2], []))
         engine.device_message(result["position"], 0x90, 0x0B, 0x7F)                 # Play (left)
         play = next(e for e in manifest["entries"] if e["function"] == "PlayPause" and e["deck"] == 1)["input"]
         self.assertIn((play["status"], play["data1"], 0x7F), sent)
+        # moving its first deck to deck 3 moves the controls that drove deck 1
+        engine.device_message(result["position"], 0x80, 0x0B, 0)
+        engine.assign(result["position"], deck=3, slot=0)
+        sent.clear()
+        engine.device_message(result["position"], 0x90, 0x0B, 0x7F)
+        play3 = next(e for e in manifest["entries"] if e["function"] == "PlayPause" and e["deck"] == 3)["input"]
+        self.assertIn((play3["status"], play3["data1"], 0x7F), sent)
 
     def test_a_different_file_with_the_same_name_never_changes_the_first(self):
         first = self.setup.import_file({"xml": SAMPLE})

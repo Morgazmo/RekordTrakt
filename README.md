@@ -24,7 +24,7 @@ Play Rekordbox with Traktor Kontrol controllers. RekordTrakt sits between your K
 
 ## Install
 
-1. Download `RekordTrakt-1.0.0-setup.exe` from [Releases](https://github.com/Morgazmo/RekordTrakt/releases) and run it. It installs for your Windows user only, so it needs no administrator rights. The installer isn't code-signed, so Windows SmartScreen may ask you to confirm (More info › Run anyway).
+1. Download `RekordTrakt-1.0.1-setup.exe` from [Releases](https://github.com/Morgazmo/RekordTrakt/releases) and run it. It installs for your Windows user only, so it needs no administrator rights. The installer isn't code-signed, so Windows SmartScreen may ask you to confirm (More info › Run anyway).
 2. Start RekordTrakt. It opens its window and adds a tray icon.
 3. Put your controllers in MIDI mode, then add them in **Settings › MIDI devices**.
 4. Install RekordTrakt's MIDI mapping into Rekordbox: the header shows **Rekordbox's mapping file isn't installed**; click it, then **Install**. RekordTrakt closes Rekordbox for a moment (asking first if a deck is playing), installs the mapping with backups, and starts Rekordbox again, each step on your click.

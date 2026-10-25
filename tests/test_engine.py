@@ -190,6 +190,34 @@ class F1Tests(unittest.TestCase):
         self.assertEqual(self.r.sent(), [("PartIsolatorDrums", 1, 127), ("PartIsolatorDrums.lsb", 1, 127),
                                          ("PartIsolatorInst", 4, 0), ("PartIsolatorInst.lsb", 4, 0)])
 
+    def test_an_f1_can_move_to_other_decks_and_fx_unit(self):
+        e = self.r.engine
+        e.assign("f1_left", deck=2, slot=0)              # first deck: 1 -> 2
+        e.assign("f1_left", deck=4, slot=1)              # second deck: 3 -> 4
+        e.assign("f1_left", fx=2, slot=0)                # FX unit 1 -> 2
+        self.assertEqual((e.devices["f1_left"].decks, e.devices["f1_left"].fx_units), ([2, 4], [2]))
+        self.r.msg("f1_left", 0xBC, 0x02, 127)           # knob 1: drums on the first deck
+        self.r.msg("f1_left", 0xB7, 0x41, 0x7F)          # pad 8: Colour FX centre on the second deck's channel
+        self.assertEqual(self.r.sent(), [("PartIsolatorDrums", 2, 127), ("PartIsolatorDrums.lsb", 2, 127),
+                                         ("CFXParameterCH4Center", None, 127)])
+        self.assertEqual(self.r.saved[-1].decks, [2, 4])
+
+    def test_settings_describe_what_each_controller_can_move(self):
+        devices = {d["position"]: d for d in self.r.engine.view()["devices"]}
+        f1 = devices["f1_left"]["assign"]
+        self.assertEqual([(r["label"], r["items"]) for r in f1], [
+            ("First deck", [{"slot": 0, "kind": "deck", "value": 1}]),
+            ("Second deck", [{"slot": 1, "kind": "deck", "value": 3}]),
+            ("FX unit", [{"slot": 0, "kind": "fx", "value": 1}])])
+        x1 = devices["x1_left"]["assign"]
+        self.assertEqual([r["label"] for r in x1], ["Left deck", "Right deck"])
+        self.assertEqual(x1[0]["items"], [{"half": "L", "kind": "deck", "value": 1}, {"half": "L", "kind": "fx", "value": 1}])
+
+    def test_the_bridge_covers_every_deck_an_f1_can_move_to(self):
+        uses = self.r.engine.uses()
+        self.assertTrue(all(("PartIsolatorDrums", deck) in uses for deck in (1, 2, 3, 4)))
+        self.assertTrue(all((f"CFXParameterCH{n}Center", None) in uses for n in (1, 2, 3, 4)))
+
     def test_filter_knob_and_reset(self):
         self.r.msg("f1_left", 0xBC, 0x05, 30)        # knob 4 -> CFX CH1
         self.r.msg("f1_left", 0xB7, 0x41, 0x7F)      # pad 8 -> CFX CH3 centre

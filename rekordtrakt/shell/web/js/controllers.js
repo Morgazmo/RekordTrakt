@@ -388,7 +388,7 @@ function buildDeckHead(card, item) {
   const pages = dev.pages.length && half0 && half0.half;
   const box = placed(el("div", "deckhead" + (pages ? "" : " compact")), item);
   const line = el("div", "line1");
-  let select = null;
+  let select = null, slotSelects = [];
   const fixed = el("span", "deck-fixed");
   if (dev.reassignable && half0 && half0.half) {
     select = el("select", "deck-select");
@@ -396,6 +396,20 @@ function buildDeckHead(card, item) {
     for (const d of [1, 2, 3, 4]) select.appendChild(new Option(`Deck ${d}`, d));
     select.onchange = () => change("assign", { position: card.position, half: item.half, deck: Number(select.value) }, `Deck ${select.value}`);
     line.appendChild(select);
+  } else if (dev.reassignable && half0 && (half0.slots || []).length) {
+    // A controller without halves: one dropdown per deck it drives ("Decks 1 · 3"), each moved on its own.
+    const many = half0.slots.length > 1;
+    line.appendChild(el("span", "deck-fixed", many ? "Decks" : ""));
+    slotSelects = half0.slots.map((s, i) => {
+      const sel = el("select", "deck-select");
+      sel.setAttribute("aria-label", `${dev.name} ${s.label}`);
+      sel.title = s.label;
+      for (const d of [1, 2, 3, 4]) sel.appendChild(new Option(many ? String(d) : `Deck ${d}`, d));
+      sel.onchange = () => change("assign", { position: card.position, slot: i, deck: Number(sel.value) }, `${s.label}: deck ${sel.value}`);
+      if (i) line.appendChild(el("span", "deck-sep", "·"));
+      line.appendChild(sel);
+      return sel;
+    });
   } else line.appendChild(fixed);
   const fx = el("span", "fxchip"), badge = el("span", "badge");
   line.append(fx, badge);
@@ -414,6 +428,12 @@ function buildDeckHead(card, item) {
     if (!half) return;
     box.style.setProperty("--deck", DECK_VAR(half.deck || (half.decks && half.decks[0])));
     if (select) { if (document.activeElement !== select) select.value = String(half.deck); }
+    else if (slotSelects.length) slotSelects.forEach((sel, i) => {
+      if (document.activeElement !== sel && half.slots[i]) {
+        sel.value = String(half.slots[i].deck);
+        sel.style.setProperty("--deck", DECK_VAR(half.slots[i].deck));
+      }
+    });
     else fixed.textContent = half.decks ? `Decks ${half.decks.join(" · ")}` : `Deck ${half.deck}`;
     fx.textContent = `FX ${half.fx}`;
     const b = [half.modes.browser ? "Browser" : null, half.modes.bank ? "Cues E–H" : null].filter(Boolean).join(" · ");

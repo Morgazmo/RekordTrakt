@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Every controller's decks and FX units can be changed, in Settings and on its card: an X1's halves as before, an F1's first deck, second deck and FX unit, and the decks an imported controller drives. Its stems, mutes, Colour FX and LEDs follow.
+- A controller definition can say which decks and FX units the controller drives (`deck_slots`, `fx_slots`), so a new controller gets the same choices without code.
+
 ## 1.0.0
 
 The first release.

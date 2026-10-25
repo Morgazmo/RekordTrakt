@@ -5,6 +5,11 @@ new file, not new code.
 Definition format (schema 1):
   type, name, maker, midi_mode, port_hints      what it is and how to put it in MIDI mode
   halves                                         ["L", "R"] for a two-deck unit (control ids "L.x" / "R.x"), else []
+                                                 (each half drives one deck and one FX unit, chosen in the window)
+  deck_slots, fx_slots                           a unit without halves: the decks and FX units it drives, each
+                                                 {key, label, default?}; bindings name one by its key ("a"), and the
+                                                 window lets you move each. Default: decks "a" and "b" (first and
+                                                 second) and FX unit "fx"; [] for none
   shift                                          {"style": "channel_offset", "offset": n} when shifted controls arrive
                                                  n channels up; {"style": "none"} when Shift sends nothing
   led_interval                                   seconds between LED messages (some units drop bursts)
@@ -21,9 +26,11 @@ import functools
 import json
 from pathlib import Path
 
+import re
+
 from rekordtrakt import paths
-from rekordtrakt.devices.base import (PRESS, RELEASE, TURN, VALUE, Decoded, relative_offset64,
-                                      relative_twos_complement)
+from rekordtrakt.devices.base import (DEFAULT_DECK_SLOTS, DEFAULT_FX_SLOTS, PRESS, RELEASE, RESERVED_KEYS, TURN,
+                                      VALUE, Decoded, relative_offset64, relative_twos_complement)
 
 DEFINITIONS_DIR = Path(__file__).resolve().parent / "definitions"
 # Your own controllers (imported from a mapping file): with your settings, never inside the program.
@@ -44,6 +51,19 @@ class DefinedDevice:
         self.display_name = definition["name"]
         self.led_interval = definition.get("led_interval", 0.01)
         self.has_halves = bool(definition.get("halves"))
+        if self.has_halves:                     # each half has its own deck and FX unit instead
+            self.deck_slots, self.fx_slots = (), ()
+        else:
+            self.deck_slots = tuple(definition.get("deck_slots", DEFAULT_DECK_SLOTS))
+            self.fx_slots = tuple(definition.get("fx_slots", DEFAULT_FX_SLOTS))
+            keys = [s.get("key") for s in self.deck_slots + self.fx_slots]
+            if len(self.deck_slots) > 4 or len(self.fx_slots) > 2 or len(set(keys)) != len(keys):
+                raise DefinitionError(f"{self.type_name}: up to 4 deck slots and 2 FX slots, each with its own key")
+            for slot in self.deck_slots + self.fx_slots:
+                key = slot.get("key")
+                if not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,15}", key) or (
+                        key in RESERVED_KEYS and not (key == "fx" and slot in self.fx_slots)):
+                    raise DefinitionError(f"{self.type_name}: '{key}' can't be a slot key")
         shift = definition.get("shift") or {}
         self.has_shift = shift.get("style") == "channel_offset"
         self._velocity = definition.get("led_values") == "velocity"
@@ -113,6 +133,7 @@ class DefinedDevice:
         """What the window needs: names, kinds, layout (no MIDI details)."""
         d = self.definition
         return {"type": d["type"], "name": d["name"], "maker": d.get("maker"), "halves": d.get("halves", []),
+                "deck_slots": list(self.deck_slots), "fx_slots": list(self.fx_slots),
                 "has_shift": self.has_shift, "midi_mode": d.get("midi_mode"),
                 "controls": {c["id"]: {"kind": c["kind"], "name": c.get("name", c["id"]), "led": bool(c.get("led"))}
                              for c in d["controls"]},
