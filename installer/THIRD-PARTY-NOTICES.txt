@@ -1,0 +1,27 @@
+RekordTrakt is free software under the GNU General Public License, version 3 (LICENSE.txt).
+
+It includes the following components, each under its own license. Their full license texts are in the licenses
+folder next to this file.
+
+Python 3.13 runtime (the interpreter and its standard library)
+  Python Software Foundation License Version 2.
+  Python's Windows build includes bzip2, libffi, OpenSSL, xz, zlib and expat, under the licenses listed in
+  licenses\Python.txt.
+
+.NET runtime (inside rekordtrakt-bridge.exe)
+  MIT License. Copyright (c) .NET Foundation and Contributors.
+  licenses\dotnet-runtime.txt, licenses\dotnet-runtime-third-party-notices.txt
+
+Windows MIDI Services App SDK (Windows.Devices.Midi2.dll)
+  MIT License. Copyright (c) Microsoft Corporation.
+  licenses\Windows-MIDI-Services.txt
+
+C#/WinRT projection support (inside rekordtrakt-bridge.exe)
+  MIT License. Copyright (c) Microsoft Corporation.
+  licenses\CsWinRT.txt
+
+Microsoft Visual C++ runtime (vcruntime140.dll, vcruntime140_1.dll)
+  Redistributed with the Python runtime under the Microsoft Visual Studio redistribution terms.
+
+Rekordbox is a trademark of AlphaTheta Corporation. Traktor and Kontrol are trademarks of Native Instruments GmbH.
+RekordTrakt is not affiliated with or endorsed by either.

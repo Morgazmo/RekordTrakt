@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.vs/
+*.log
+/build/
+/dist/
+tools/bridge-helper/bin/
+tools/bridge-helper/obj/
+tools/bridge-helper/local-packages/

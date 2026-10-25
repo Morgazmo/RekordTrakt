@@ -1,0 +1,14 @@
+{
+  "bridge": {
+    "app_port": "RekordTrakt App",
+    "rekordbox_port": "RekordTrakt Bridge"
+  },
+  "devices": {
+    "x1_left": {"type": "x1mk3", "profile": "performance_mod", "port": "2 - TRAKTOR X1 MK3",
+                "decks": [1, 3], "fx_units": [1, 2], "options": {}},
+    "x1_right": {"type": "x1mk3", "profile": "performance_mod", "port": "TRAKTOR X1 MK3",
+                 "decks": [2, 4], "fx_units": [1, 2], "options": {}},
+    "f1_left": {"type": "f1", "port": "3 - Traktor Kontrol F1 - 2", "decks": [1, 3], "fx_units": [1]},
+    "f1_right": {"type": "f1", "port": "2 - Traktor Kontrol F1 - 1", "decks": [2, 4], "fx_units": [2]}
+  }
+}

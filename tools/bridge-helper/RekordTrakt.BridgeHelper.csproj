@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Small helper the Python app calls to create and remove the MIDI bridge (a Windows MIDI Services loopback
+       pair), so users don't need the MIDI Settings tools. Based on Microsoft's samples/csharp-net/loopback-endpoints
+       (microsoft/MIDI, MIT). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <WindowsSDKPackageVersion>10.0.26100.57</WindowsSDKPackageVersion>
+    <RootNamespace>RekordTrakt.BridgeHelper</RootNamespace>
+    <AssemblyName>rekordtrakt-bridge</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>x64;ARM64</Platforms>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CSWinRTInputs>Windows.Devices.Midi2</CSWinRTInputs>
+    <CsWinRTIncludes>Windows.Devices.Midi2</CsWinRTIncludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
+    <!-- Not on nuget.org: the .nupkg is a GitHub release asset (microsoft/MIDI, inbox-preview-11), kept in
+         local-packages/ (see README.md). -->
+    <PackageReference Include="Windows.Devices.Midi2" Version="0.99.92-preview.11" />
+  </ItemGroup>
+
+  <!-- The package's native symbols are ~130 MB per architecture; users don't need them. -->
+  <Target Name="DropNativeSymbols" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
+</Project>

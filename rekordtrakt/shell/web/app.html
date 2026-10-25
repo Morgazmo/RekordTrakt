@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RekordTrakt</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2096%2096%22%3E%3Crect%20width%3D%2296%22%20height%3D%2296%22%20rx%3D%2222%22%20fill%3D%22%231c1f26%22/%3E%3Ccircle%20cx%3D%2248%22%20cy%3D%2248%22%20r%3D%2228%22%20fill%3D%22none%22%20stroke%3D%22%235dcaa5%22%20stroke-width%3D%2212%22%20stroke-dasharray%3D%22158%2018%22%20transform%3D%22rotate%28-100%2048%2048%29%22/%3E%3Ccircle%20cx%3D%2248%22%20cy%3D%2248%22%20r%3D%229%22%20fill%3D%22%23ffffff%22/%3E%3C/svg%3E">
+<script src="/web/js/boot.js"></script>
+<link rel="stylesheet" href="/web/app.css">
+</head>
+<body>
+<header>
+  <div class="brand"><img alt="" id="logo">RekordTrakt</div>
+  <nav>
+    <a data-tab="controllers" aria-selected="true">Controllers</a>
+    <a data-tab="settings">Settings</a>
+    <a data-tab="debug">Debug</a>
+  </nav>
+  <!-- What needs your attention, if anything: opens the list, each with its fix. Hidden when all is well. -->
+  <button class="hchip notice" id="notice-chip" hidden aria-haspopup="true"><span class="dot"></span><span class="t" id="notice-text"></span><span class="n" id="notice-more"></span></button>
+  <div class="spacer"></div>
+  <div class="status">
+    <label class="hchip" id="bypass-chip" title="Bypass: your controllers send nothing to Rekordbox. The window, Debug and LEDs keep working.">
+      <span class="k">Bypass</span>
+      <span class="switch amber"><input type="checkbox" id="bypass" role="switch" aria-label="Bypass"><span></span></span>
+    </label>
+    <button class="hchip" id="appearance-btn" aria-haspopup="true">Theme</button>
+    <button class="hchip" id="support" title="RekordTrakt is free. If it helps you, you can support it on Ko-fi.">Support</button>
+    <button class="hchip rb" id="rb-chip" title="Rekordbox: which version is running. Click for its MIDI mapping."><span class="dot"></span><span class="t" id="rb-state">Rekordbox</span></button>
+  </div>
+</header>
+
+<main>
+  <section class="tab active" id="tab-controllers">
+    <div class="rig" id="rig"></div>
+    <div class="empty-state" id="no-view"><b id="no-view-title">Starting</b><span id="no-view-text">RekordTrakt is connecting to your controllers.</span><button id="no-view-add" hidden>Add a controller</button></div>
+  </section>
+  <div class="watermark" id="watermark"><b id="wm-title">BYPASS</b><span id="wm-text"></span></div>
+  <div class="wm-arrow" id="wm-arrow"><span>Bypass is on</span><b>↑</b></div>
+  <section class="tab" id="tab-settings"><div class="settings" id="settings"></div></section>
+  <section class="tab" id="tab-debug"></section>
+</main>
+<div class="toast" id="toast"></div>
+<div class="popover" id="appearance-pop" hidden></div>
+<div class="popover notices" id="notice-pop" hidden></div>
+
+<aside class="editor" id="editor" hidden aria-label="Mapping editor">
+  <header>
+    <div class="t"><b id="ed-title"></b><small id="ed-sub"></small></div>
+    <button class="iconbtn" id="ed-close" aria-label="Close the editor">✕</button>
+  </header>
+  <div class="body" id="ed-body"></div>
+  <div class="foot">
+    <span class="err" id="ed-err"></span><span class="grow"></span>
+    <button id="ed-reset" hidden>Use the preset</button>
+    <button id="ed-cancel">Close</button>
+    <button id="ed-save">Save</button>
+  </div>
+</aside>
+
+<dialog class="rb" id="rb-dialog" aria-labelledby="rb-title">
+  <h2 id="rb-title">Rekordbox's MIDI mapping file</h2>
+  <p class="why" id="rb-why"></p>
+  <ol>
+    <li id="rb-step-close"><div class="st"><b>Close Rekordbox</b><small id="rb-close-text"></small></div>
+      <button id="rb-end" hidden>End it</button><button id="rb-close">Close</button></li>
+    <li id="rb-step-install"><div class="st"><b>Install the mapping file</b><small id="rb-install-text"></small></div>
+      <button id="rb-install">Install</button></li>
+    <li id="rb-step-start"><div class="st"><b>Start Rekordbox</b><small id="rb-start-text"></small></div>
+      <button id="rb-start">Start</button></li>
+  </ol>
+  <div class="foot"><button id="rb-done">Close</button></div>
+</dialog>
+
+<script type="module" src="/web/js/main.js"></script>
+</body>
+</html>

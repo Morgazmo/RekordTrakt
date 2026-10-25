@@ -1,0 +1,980 @@
+{
+ "schema": 1,
+ "type": "x1mk3",
+ "name": "Kontrol X1 MK3",
+ "maker": "Native Instruments",
+ "midi_mode": "MIDI mode: hold Shift and press Mode on the X1",
+ "port_hints": [
+  "X1 MK3"
+ ],
+ "halves": [
+  "L",
+  "R"
+ ],
+ "shift": {
+  "style": "channel_offset",
+  "offset": 2,
+  "note": "Shifted controls arrive two channels up (3/4); Shift alone sends nothing"
+ },
+ "led_interval": 0.002,
+ "led_values": "velocity",
+ "controls": [
+  {
+   "id": "L.fx_assign_1",
+   "kind": "button",
+   "name": "FX Assign ←",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 0
+   },
+   "led": true
+  },
+  {
+   "id": "L.fx_assign_2",
+   "kind": "button",
+   "name": "FX Assign →",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 1
+   },
+   "led": true
+  },
+  {
+   "id": "L.hotcue_1",
+   "kind": "button",
+   "name": "Hotcue 1",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 2
+   },
+   "led": true
+  },
+  {
+   "id": "L.hotcue_2",
+   "kind": "button",
+   "name": "Hotcue 2",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 3
+   },
+   "led": true
+  },
+  {
+   "id": "L.hotcue_3",
+   "kind": "button",
+   "name": "Hotcue 3",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 4
+   },
+   "led": true
+  },
+  {
+   "id": "L.hotcue_4",
+   "kind": "button",
+   "name": "Hotcue 4",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 5
+   },
+   "led": true
+  },
+  {
+   "id": "L.nudge_left",
+   "kind": "button",
+   "name": "Nudge ←",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 6
+   },
+   "led": true
+  },
+  {
+   "id": "L.nudge_right",
+   "kind": "button",
+   "name": "Nudge →",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 7
+   },
+   "led": true
+  },
+  {
+   "id": "L.cue",
+   "kind": "button",
+   "name": "CUE",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 8
+   },
+   "led": true
+  },
+  {
+   "id": "L.rev",
+   "kind": "button",
+   "name": "REV",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 9
+   },
+   "led": true
+  },
+  {
+   "id": "L.play",
+   "kind": "button",
+   "name": "PLAY",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 10
+   },
+   "led": true
+  },
+  {
+   "id": "L.sync",
+   "kind": "button",
+   "name": "SYNC",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 11
+   },
+   "led": true
+  },
+  {
+   "id": "L.fx_button_1",
+   "kind": "button",
+   "name": "Fx Button 1",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 16
+   },
+   "led": true
+  },
+  {
+   "id": "L.fx_button_2",
+   "kind": "button",
+   "name": "Fx Button 2",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 17
+   },
+   "led": true
+  },
+  {
+   "id": "L.fx_button_3",
+   "kind": "button",
+   "name": "Fx Button 3",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 18
+   },
+   "led": true
+  },
+  {
+   "id": "L.fx_button_4",
+   "kind": "button",
+   "name": "Fx Button 4",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 19
+   },
+   "led": true
+  },
+  {
+   "id": "L.browse_push",
+   "kind": "button",
+   "name": "Browse push",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 20
+   },
+   "led": true
+  },
+  {
+   "id": "L.loop_push",
+   "kind": "button",
+   "name": "Loop push",
+   "in": {
+    "msg": "note",
+    "ch": 1,
+    "num": 21
+   },
+   "led": true
+  },
+  {
+   "id": "L.fx_knob_1",
+   "kind": "knob",
+   "name": "Fx Knob 1",
+   "in": {
+    "msg": "cc",
+    "ch": 1,
+    "num": 16
+   }
+  },
+  {
+   "id": "L.fx_knob_2",
+   "kind": "knob",
+   "name": "Fx Knob 2",
+   "in": {
+    "msg": "cc",
+    "ch": 1,
+    "num": 17
+   }
+  },
+  {
+   "id": "L.fx_knob_3",
+   "kind": "knob",
+   "name": "Fx Knob 3",
+   "in": {
+    "msg": "cc",
+    "ch": 1,
+    "num": 18
+   }
+  },
+  {
+   "id": "L.fx_knob_4",
+   "kind": "knob",
+   "name": "Fx Knob 4",
+   "in": {
+    "msg": "cc",
+    "ch": 1,
+    "num": 19
+   }
+  },
+  {
+   "id": "L.browse",
+   "kind": "encoder",
+   "name": "Browse encoder",
+   "in": {
+    "msg": "cc",
+    "ch": 1,
+    "num": 20,
+    "relative": "offset64"
+   }
+  },
+  {
+   "id": "L.loop",
+   "kind": "encoder",
+   "name": "Loop encoder",
+   "in": {
+    "msg": "cc",
+    "ch": 1,
+    "num": 21,
+    "relative": "offset64"
+   }
+  },
+  {
+   "id": "R.fx_assign_1",
+   "kind": "button",
+   "name": "FX Assign ←",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 0
+   },
+   "led": true
+  },
+  {
+   "id": "R.fx_assign_2",
+   "kind": "button",
+   "name": "FX Assign →",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 1
+   },
+   "led": true
+  },
+  {
+   "id": "R.hotcue_1",
+   "kind": "button",
+   "name": "Hotcue 1",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 2
+   },
+   "led": true
+  },
+  {
+   "id": "R.hotcue_2",
+   "kind": "button",
+   "name": "Hotcue 2",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 3
+   },
+   "led": true
+  },
+  {
+   "id": "R.hotcue_3",
+   "kind": "button",
+   "name": "Hotcue 3",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 4
+   },
+   "led": true
+  },
+  {
+   "id": "R.hotcue_4",
+   "kind": "button",
+   "name": "Hotcue 4",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 5
+   },
+   "led": true
+  },
+  {
+   "id": "R.nudge_left",
+   "kind": "button",
+   "name": "Nudge ←",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 6
+   },
+   "led": true
+  },
+  {
+   "id": "R.nudge_right",
+   "kind": "button",
+   "name": "Nudge →",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 7
+   },
+   "led": true
+  },
+  {
+   "id": "R.cue",
+   "kind": "button",
+   "name": "CUE",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 8
+   },
+   "led": true
+  },
+  {
+   "id": "R.rev",
+   "kind": "button",
+   "name": "REV",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 9
+   },
+   "led": true
+  },
+  {
+   "id": "R.play",
+   "kind": "button",
+   "name": "PLAY",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 10
+   },
+   "led": true
+  },
+  {
+   "id": "R.sync",
+   "kind": "button",
+   "name": "SYNC",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 11
+   },
+   "led": true
+  },
+  {
+   "id": "R.fx_button_1",
+   "kind": "button",
+   "name": "Fx Button 1",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 16
+   },
+   "led": true
+  },
+  {
+   "id": "R.fx_button_2",
+   "kind": "button",
+   "name": "Fx Button 2",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 17
+   },
+   "led": true
+  },
+  {
+   "id": "R.fx_button_3",
+   "kind": "button",
+   "name": "Fx Button 3",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 18
+   },
+   "led": true
+  },
+  {
+   "id": "R.fx_button_4",
+   "kind": "button",
+   "name": "Fx Button 4",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 19
+   },
+   "led": true
+  },
+  {
+   "id": "R.browse_push",
+   "kind": "button",
+   "name": "Browse push",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 20
+   },
+   "led": true
+  },
+  {
+   "id": "R.loop_push",
+   "kind": "button",
+   "name": "Loop push",
+   "in": {
+    "msg": "note",
+    "ch": 2,
+    "num": 21
+   },
+   "led": true
+  },
+  {
+   "id": "R.fx_knob_1",
+   "kind": "knob",
+   "name": "Fx Knob 1",
+   "in": {
+    "msg": "cc",
+    "ch": 2,
+    "num": 16
+   }
+  },
+  {
+   "id": "R.fx_knob_2",
+   "kind": "knob",
+   "name": "Fx Knob 2",
+   "in": {
+    "msg": "cc",
+    "ch": 2,
+    "num": 17
+   }
+  },
+  {
+   "id": "R.fx_knob_3",
+   "kind": "knob",
+   "name": "Fx Knob 3",
+   "in": {
+    "msg": "cc",
+    "ch": 2,
+    "num": 18
+   }
+  },
+  {
+   "id": "R.fx_knob_4",
+   "kind": "knob",
+   "name": "Fx Knob 4",
+   "in": {
+    "msg": "cc",
+    "ch": 2,
+    "num": 19
+   }
+  },
+  {
+   "id": "R.browse",
+   "kind": "encoder",
+   "name": "Browse encoder",
+   "in": {
+    "msg": "cc",
+    "ch": 2,
+    "num": 20,
+    "relative": "offset64"
+   }
+  },
+  {
+   "id": "R.loop",
+   "kind": "encoder",
+   "name": "Loop encoder",
+   "in": {
+    "msg": "cc",
+    "ch": 2,
+    "num": 21,
+    "relative": "offset64"
+   }
+  }
+ ],
+ "layout": {
+  "columns": [
+   "1fr",
+   "1fr",
+   "1fr",
+   "1fr",
+   "1fr",
+   "1fr",
+   "1fr",
+   "1fr"
+  ],
+  "items": [
+   {
+    "control": "L.fx_assign_1",
+    "c": 1,
+    "r": 1,
+    "shape": "key",
+    "glyph": "←",
+    "w": 2
+   },
+   {
+    "control": "L.fx_assign_2",
+    "c": 3,
+    "r": 1,
+    "shape": "key",
+    "glyph": "→",
+    "w": 2
+   },
+   {
+    "control": "R.fx_assign_1",
+    "c": 5,
+    "r": 1,
+    "shape": "key",
+    "glyph": "←",
+    "w": 2
+   },
+   {
+    "control": "R.fx_assign_2",
+    "c": 7,
+    "r": 1,
+    "shape": "key",
+    "glyph": "→",
+    "w": 2
+   },
+   {
+    "role": "deck",
+    "half": "L",
+    "c": 1,
+    "r": 2,
+    "w": 4
+   },
+   {
+    "role": "deck",
+    "half": "R",
+    "c": 5,
+    "r": 2,
+    "w": 4
+   },
+   {
+    "role": "row",
+    "half": "L",
+    "index": 1,
+    "c": 1,
+    "r": 3,
+    "w": 4
+   },
+   {
+    "control": "L.fx_button_1",
+    "c": 1,
+    "r": 3,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "control": "L.fx_knob_1",
+    "c": 3,
+    "r": 3,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "role": "row",
+    "half": "R",
+    "index": 1,
+    "c": 5,
+    "r": 3,
+    "w": 4
+   },
+   {
+    "control": "R.fx_knob_1",
+    "c": 5,
+    "r": 3,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "control": "R.fx_button_1",
+    "c": 7,
+    "r": 3,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "role": "row",
+    "half": "L",
+    "index": 2,
+    "c": 1,
+    "r": 4,
+    "w": 4
+   },
+   {
+    "control": "L.fx_button_2",
+    "c": 1,
+    "r": 4,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "control": "L.fx_knob_2",
+    "c": 3,
+    "r": 4,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "role": "row",
+    "half": "R",
+    "index": 2,
+    "c": 5,
+    "r": 4,
+    "w": 4
+   },
+   {
+    "control": "R.fx_knob_2",
+    "c": 5,
+    "r": 4,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "control": "R.fx_button_2",
+    "c": 7,
+    "r": 4,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "role": "row",
+    "half": "L",
+    "index": 3,
+    "c": 1,
+    "r": 5,
+    "w": 4
+   },
+   {
+    "control": "L.fx_button_3",
+    "c": 1,
+    "r": 5,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "control": "L.fx_knob_3",
+    "c": 3,
+    "r": 5,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "role": "row",
+    "half": "R",
+    "index": 3,
+    "c": 5,
+    "r": 5,
+    "w": 4
+   },
+   {
+    "control": "R.fx_knob_3",
+    "c": 5,
+    "r": 5,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "control": "R.fx_button_3",
+    "c": 7,
+    "r": 5,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "role": "row",
+    "half": "L",
+    "index": 4,
+    "c": 1,
+    "r": 6,
+    "w": 4
+   },
+   {
+    "control": "L.fx_button_4",
+    "c": 1,
+    "r": 6,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "control": "L.fx_knob_4",
+    "c": 3,
+    "r": 6,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "role": "row",
+    "half": "R",
+    "index": 4,
+    "c": 5,
+    "r": 6,
+    "w": 4
+   },
+   {
+    "control": "R.fx_knob_4",
+    "c": 5,
+    "r": 6,
+    "shape": "knob",
+    "w": 2
+   },
+   {
+    "control": "R.fx_button_4",
+    "c": 7,
+    "r": 6,
+    "shape": "round",
+    "w": 2
+   },
+   {
+    "control": "L.browse",
+    "push": "L.browse_push",
+    "c": 1,
+    "r": 7,
+    "shape": "encoder",
+    "w": 2
+   },
+   {
+    "control": "L.loop",
+    "push": "L.loop_push",
+    "c": 3,
+    "r": 7,
+    "shape": "encoder",
+    "w": 2
+   },
+   {
+    "control": "R.loop",
+    "push": "R.loop_push",
+    "c": 5,
+    "r": 7,
+    "shape": "encoder",
+    "w": 2
+   },
+   {
+    "control": "R.browse",
+    "push": "R.browse_push",
+    "c": 7,
+    "r": 7,
+    "shape": "encoder",
+    "w": 2
+   },
+   {
+    "control": "L.hotcue_1",
+    "c": 1,
+    "r": 8,
+    "shape": "key",
+    "glyph": "1",
+    "w": 2
+   },
+   {
+    "control": "L.hotcue_2",
+    "c": 3,
+    "r": 8,
+    "shape": "key",
+    "glyph": "2",
+    "w": 2
+   },
+   {
+    "control": "L.hotcue_3",
+    "c": 1,
+    "r": 9,
+    "shape": "key",
+    "glyph": "3",
+    "w": 2
+   },
+   {
+    "control": "L.hotcue_4",
+    "c": 3,
+    "r": 9,
+    "shape": "key",
+    "glyph": "4",
+    "w": 2
+   },
+   {
+    "control": "L.nudge_left",
+    "c": 1,
+    "r": 10,
+    "shape": "key",
+    "glyph": "←",
+    "w": 2
+   },
+   {
+    "control": "L.nudge_right",
+    "c": 3,
+    "r": 10,
+    "shape": "key",
+    "glyph": "→",
+    "w": 2
+   },
+   {
+    "control": "L.cue",
+    "c": 1,
+    "r": 11,
+    "shape": "key",
+    "glyph": "CUE",
+    "w": 2
+   },
+   {
+    "control": "L.rev",
+    "c": 3,
+    "r": 11,
+    "shape": "key",
+    "glyph": "REV",
+    "w": 2
+   },
+   {
+    "control": "L.play",
+    "c": 1,
+    "r": 12,
+    "shape": "round",
+    "glyph": "PLAY",
+    "size": "large",
+    "w": 2
+   },
+   {
+    "control": "L.sync",
+    "c": 3,
+    "r": 12,
+    "shape": "round",
+    "glyph": "SYNC",
+    "size": "large",
+    "w": 2
+   },
+   {
+    "control": "R.hotcue_1",
+    "c": 5,
+    "r": 8,
+    "shape": "key",
+    "glyph": "1",
+    "w": 2
+   },
+   {
+    "control": "R.hotcue_2",
+    "c": 7,
+    "r": 8,
+    "shape": "key",
+    "glyph": "2",
+    "w": 2
+   },
+   {
+    "control": "R.hotcue_3",
+    "c": 5,
+    "r": 9,
+    "shape": "key",
+    "glyph": "3",
+    "w": 2
+   },
+   {
+    "control": "R.hotcue_4",
+    "c": 7,
+    "r": 9,
+    "shape": "key",
+    "glyph": "4",
+    "w": 2
+   },
+   {
+    "control": "R.nudge_left",
+    "c": 5,
+    "r": 10,
+    "shape": "key",
+    "glyph": "←",
+    "w": 2
+   },
+   {
+    "control": "R.nudge_right",
+    "c": 7,
+    "r": 10,
+    "shape": "key",
+    "glyph": "→",
+    "w": 2
+   },
+   {
+    "control": "R.cue",
+    "c": 5,
+    "r": 11,
+    "shape": "key",
+    "glyph": "CUE",
+    "w": 2
+   },
+   {
+    "control": "R.rev",
+    "c": 7,
+    "r": 11,
+    "shape": "key",
+    "glyph": "REV",
+    "w": 2
+   },
+   {
+    "control": "R.play",
+    "c": 5,
+    "r": 12,
+    "shape": "round",
+    "glyph": "PLAY",
+    "size": "large",
+    "w": 2
+   },
+   {
+    "control": "R.sync",
+    "c": 7,
+    "r": 12,
+    "shape": "round",
+    "glyph": "SYNC",
+    "size": "large",
+    "w": 2
+   }
+  ],
+  "header": {
+   "shift": true
+  },
+  "omitted": "MODE (sends nothing in MIDI mode) and the deck screens; SHIFT is the latch in the card header",
+  "source": "NI X1 MK3 manual, hardware overview diagram (order kept, spacing compacted)"
+ }
+}

@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RekordTrakt Debug</title>
+<script>
+// Follow the window's theme and skin: same origin, so the same localStorage, and "storage" fires when they change.
+function rtTheme() {
+  let t = null, s = null;
+  try { t = localStorage.getItem("rt-theme"); s = localStorage.getItem("rt-skin"); } catch {}
+  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  else delete document.documentElement.dataset.theme;
+  if (s && s !== "teal") document.documentElement.dataset.skin = s;
+  else delete document.documentElement.dataset.skin;
+}
+rtTheme();
+window.addEventListener("storage", (e) => { if (e.key === "rt-theme" || e.key === "rt-skin") rtTheme(); });
+</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2096%2096%22%3E%3Crect%20width%3D%2296%22%20height%3D%2296%22%20rx%3D%2222%22%20fill%3D%22%231c1f26%22/%3E%3Ccircle%20cx%3D%2248%22%20cy%3D%2248%22%20r%3D%2228%22%20fill%3D%22none%22%20stroke%3D%22%235dcaa5%22%20stroke-width%3D%2212%22%20stroke-dasharray%3D%22158%2018%22%20transform%3D%22rotate%28-100%2048%2048%29%22/%3E%3Ccircle%20cx%3D%2248%22%20cy%3D%2248%22%20r%3D%229%22%20fill%3D%22%23ffffff%22/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0e1014; --panel: #151820; --panel-2: #1b1f29; --line: #262b36; --line-2: #313847;
+  --text: #e7eaf0; --muted: #8a93a5; --faint: #5d6576;
+  --ok: #22c55e; --warn: #f59e0b; --bad: #ef4444; --busy: #3b82f6; --off: #94a3b8;
+  --k-input: #60a5fa; --k-layer: #a78bfa; --k-send: #34d399; --k-feedback: #fbbf24; --k-notice: #2dd4bf;
+  --k-error: #f87171; --k-system: #94a3b8;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace;
+  --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #f4f5f8; --panel: #ffffff; --panel-2: #f1f3f7; --line: #e2e5eb; --line-2: #d3d8e1;
+    --text: #151922; --muted: #5d6576; --faint: #8a93a5;
+    --k-input: #2563eb; --k-layer: #7c3aed; --k-send: #059669; --k-feedback: #b45309; --k-notice: #0f766e;
+    --k-error: #dc2626; --k-system: #64748b;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f5f8; --panel: #ffffff; --panel-2: #f1f3f7; --line: #e2e5eb; --line-2: #d3d8e1;
+  --text: #151922; --muted: #5d6576; --faint: #8a93a5;
+  --k-input: #2563eb; --k-layer: #7c3aed; --k-send: #059669; --k-feedback: #b45309; --k-notice: #0f766e;
+  --k-error: #dc2626; --k-system: #64748b;
+}
+/* the window's skins (backgrounds only: the trace keeps its colours so kinds stay recognisable) */
+:root[data-skin="blue"]:not([data-theme="light"]) { --bg: #0b0f18; --panel: #111827; --panel-2: #172033; --line: #1f2a3d; --line-2: #2b3953; }
+:root[data-skin="orange"]:not([data-theme="light"]) { --bg: #0f0f10; --panel: #161618; --panel-2: #1d1d20; --line: #26262b; --line-2: #34343b; }
+:root[data-skin="contrast"]:not([data-theme="light"]) { --bg: #000; --panel: #050505; --panel-2: #111; --line: #6a6a6a; --line-2: #9a9a9a; --text: #fff; --muted: #e0e0e0; --faint: #b8b8b8; }
+@media (prefers-color-scheme: light) {
+  :root[data-skin="contrast"]:not([data-theme="dark"]) { --bg: #fff; --panel: #fff; --panel-2: #f2f2f2; --line: #000; --line-2: #000; --text: #000; --muted: #222; --faint: #444; }
+  :root[data-skin="blue"]:not([data-theme="dark"]) { --bg: #eef3fb; --panel-2: #eef3fb; --line: #d9e2f0; --line-2: #c3d1e8; }
+  :root[data-skin="orange"]:not([data-theme="dark"]) { --bg: #f6f4f1; --panel-2: #f6f2ec; --line: #e7e1d8; --line-2: #d6cdbf; }
+}
+:root[data-theme="light"][data-skin="contrast"] { --bg: #fff; --panel: #fff; --panel-2: #f2f2f2; --line: #000; --line-2: #000; --text: #000; --muted: #222; --faint: #444; }
+:root[data-theme="light"][data-skin="blue"] { --bg: #eef3fb; --panel-2: #eef3fb; --line: #d9e2f0; --line-2: #c3d1e8; }
+:root[data-theme="light"][data-skin="orange"] { --bg: #f6f4f1; --panel-2: #f6f2ec; --line: #e7e1d8; --line-2: #d6cdbf; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 13px/1.4 var(--ui); display: flex; flex-direction: column; }
+button, input, select { font: inherit; color: inherit; }
+button {
+  background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 5px 12px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button:disabled { opacity: .45; cursor: default; }
+
+header {
+  display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+.brand small { color: var(--muted); font-weight: 400; }
+.logo { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--state, var(--off)); position: relative; }
+.logo::after { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: var(--state, var(--off)); }
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 3px 11px; border-radius: 999px;
+  background: color-mix(in srgb, var(--state, var(--off)) 16%, transparent); color: var(--state, var(--off)); font-weight: 600;
+}
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.spacer { flex: 1; }
+.banner {
+  display: none; padding: 8px 18px; background: color-mix(in srgb, var(--bad) 14%, var(--panel)); color: var(--text);
+  border-bottom: 1px solid color-mix(in srgb, var(--bad) 40%, var(--line));
+}
+.banner.show { display: block; }
+.banner b { color: var(--bad); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; padding: 12px 18px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.card h3 { margin: 0 0 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.big { font-size: 18px; font-weight: 600; }
+.sub { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; font-size: 12px; }
+.kv span:nth-child(odd) { color: var(--muted); }
+.kv .key { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--c); margin-right: 5px; }
+.spark { width: 100%; height: 36px; margin-top: 6px; display: block; }
+.spark polyline { fill: none; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.dev { display: flex; align-items: center; gap: 7px; font-size: 12px; white-space: nowrap; overflow: hidden; }
+.dev .name { font-weight: 600; }
+.dev .meta { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--off); }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+.warnlist { margin: 4px 0 0; padding-left: 16px; color: var(--warn); font-size: 12px; }
+
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 18px; border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 7px; overflow: hidden; }
+.seg label { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; cursor: pointer; user-select: none; }
+.seg label + label { border-left: 1px solid var(--line-2); }
+.seg input { display: none; }
+.seg label:has(input:checked) { background: var(--panel-2); }
+.seg label:not(:has(input:checked)) { color: var(--faint); }
+.swatch { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.seg label:not(:has(input:checked)) .swatch { opacity: .35; }
+.check { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); cursor: pointer; user-select: none; }
+select, input[type=search] {
+  background: var(--panel-2); border: 1px solid var(--line-2); border-radius: 6px; padding: 4px 8px;
+}
+input[type=search] { width: 200px; }
+
+main { flex: 1; min-height: 0; position: relative; }
+#trace { position: absolute; inset: 0; overflow-y: auto; font: 12px/1.5 var(--mono); padding: 4px 0 24px; }
+.row {
+  display: grid; grid-template-columns: 92px 78px 118px minmax(0, 1fr) auto; gap: 10px; padding: 1px 18px;
+  align-items: baseline; border-left: 3px solid transparent;
+}
+.row:hover { background: var(--panel); }
+.row .t { color: var(--faint); }
+.row .k { font-family: var(--ui); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--c); }
+.row .w { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .x { overflow-wrap: anywhere; }
+.row .raw { color: var(--faint); white-space: nowrap; display: none; }
+body.raw .row .raw { display: block; }
+.row.child { border-left-color: color-mix(in srgb, var(--k-input) 35%, transparent); }
+.row.child .x { padding-left: 14px; }
+.row.input { margin-top: 3px; }
+.row.error { background: color-mix(in srgb, var(--k-error) 10%, transparent); }
+.row.error .x { color: var(--k-error); }
+.row.warning .x { color: var(--warn); }
+.chip {
+  display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 4px; font-size: 11px;
+  background: color-mix(in srgb, var(--k-layer) 15%, transparent); color: var(--k-layer);
+}
+.chip.none { background: var(--panel-2); color: var(--faint); }
+body.nolayer .chip { display: none; }
+.empty { color: var(--faint); padding: 40px 18px; font-family: var(--ui); text-align: center; }
+#jump {
+  position: absolute; right: 22px; bottom: 16px; display: none; box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  background: var(--panel-2);
+}
+#jump.show { display: block; }
+footer {
+  display: flex; gap: 14px; align-items: center; padding: 6px 18px; border-top: 1px solid var(--line);
+  background: var(--panel); color: var(--muted); font-size: 12px;
+}
+footer a { color: var(--muted); cursor: pointer; text-decoration: underline; }
+.conn::before { content: "●"; margin-right: 5px; color: var(--ok); }
+/* Inside the app window's Debug tab: the window has its own header, status and Start/Stop. */
+body.embedded header, body.embedded .banner { display: none; }
+.conn.down::before { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo" id="logo"></div>RekordTrakt <small>Debug</small></div>
+  <span class="pill" id="state">connecting</span>
+  <span class="sub" id="uptime"></span>
+  <div class="spacer"></div>
+  <button id="btn-toggle">Start</button>
+  <button id="btn-restart">Restart</button>
+</header>
+<div class="banner" id="banner"></div>
+
+<section class="cards">
+  <div class="card">
+    <h3>Controllers</h3>
+    <div id="devices"><div class="sub">waiting for the translator</div></div>
+  </div>
+  <div class="card">
+    <h3>Connection</h3>
+    <div class="kv">
+      <span>MIDI bridge</span><span id="bridge-state">-</span>
+      <span>Rekordbox</span><span id="rb-state">-</span>
+      <span>also running</span><span id="others">-</span>
+    </div>
+    <div class="sub" id="bridge-msg"></div>
+    <ul class="warnlist" id="warnings"></ul>
+  </div>
+  <div class="card">
+    <h3>Traffic (per second)</h3>
+    <div class="kv">
+      <span><i class="key" style="--c:var(--k-input)"></i>controller in</span><span id="r-in">-</span>
+      <span><i class="key" style="--c:var(--k-send)"></i>sent to Rekordbox</span><span id="r-out">-</span>
+      <span><i class="key" style="--c:var(--k-feedback)"></i>Rekordbox feedback</span><span id="r-fb">-</span>
+      <span>longest wait</span><span id="r-wait">-</span>
+    </div>
+    <svg id="spark" class="spark" viewBox="0 0 200 36" preserveAspectRatio="none" aria-label="MIDI messages per second, last minute"></svg>
+  </div>
+  <div class="card">
+    <h3>Watchdog</h3>
+    <div class="kv">
+      <span>restarts</span><span id="w-restarts">0</span>
+      <span>next restart</span><span id="w-next">-</span>
+      <span>dropped events</span><span id="w-dropped">0</span>
+      <span>start at login</span><span id="w-login">-</span>
+    </div>
+  </div>
+</section>
+
+<div class="toolbar">
+  <div class="seg" id="kinds">
+    <label><input type="checkbox" value="input" checked><span class="swatch" style="--c:var(--k-input)"></span>Input</label>
+    <label><input type="checkbox" value="layer" checked><span class="swatch" style="--c:var(--k-layer)"></span>Layer</label>
+    <label><input type="checkbox" value="send" checked><span class="swatch" style="--c:var(--k-send)"></span>Sent</label>
+    <label><input type="checkbox" value="feedback" checked><span class="swatch" style="--c:var(--k-feedback)"></span>Feedback</label>
+    <label><input type="checkbox" value="notice" checked><span class="swatch" style="--c:var(--k-notice)"></span>Notices</label>
+  </div>
+  <select id="device"><option value="">All controllers</option></select>
+  <input type="search" id="search" placeholder="Filter text" spellcheck="false">
+  <label class="check"><input type="checkbox" id="raw"> Raw MIDI</label>
+  <label class="check"><input type="checkbox" id="jog"> Jog feedback</label>
+  <label class="check" title="Rekordbox blinks Cue and Play on a paused deck (and Sync), several times a second"><input type="checkbox" id="blinkfb"> Blinking LEDs</label>
+  <div class="spacer"></div>
+  <button id="btn-pause">Pause</button>
+  <button id="btn-clear">Clear</button>
+  <button id="btn-export">Export</button>
+</div>
+
+<main>
+  <div id="trace"><div class="empty" id="empty">No events yet. Press something on a controller.</div></div>
+  <button id="jump">Jump to latest ↓</button>
+</main>
+
+<footer>
+  <span class="conn" id="conn">connected</span>
+  <span id="counts"></span>
+  <div class="spacer"></div>
+  <a id="open-log">Open log folder</a>
+  <span id="version"></span>
+</footer>
+
+<script>
+"use strict";
+const PARAMS = new URLSearchParams(location.search);
+const TOKEN = PARAMS.get("token") || "";
+if (PARAMS.get("embed")) document.body.classList.add("embedded");
+const MAX_EVENTS = 20000, MAX_ROWS = 2500;
+const KIND_GROUP = {
+  input: "input", unrecognised: "input", binding: "layer", send: "send", pickup: "send", feedback: "feedback",
+  notice: "notice", log: "notice", bridge: "notice", supervisor: "notice", status: "notice", error: "error",
+};
+const KIND_LABEL = {
+  input: "input", unrecognised: "unknown", send: "sent", pickup: "pickup", feedback: "feedback", notice: "notice",
+  log: "log", bridge: "bridge", supervisor: "app", status: "status", error: "error",
+};
+const KIND_COLOUR = {
+  input: "--k-input", unrecognised: "--k-input", send: "--k-send", pickup: "--k-send", feedback: "--k-feedback",
+  notice: "--k-notice", log: "--k-system", bridge: "--k-system", supervisor: "--k-system", status: "--k-system",
+  error: "--k-error",
+};
+const STATE_COLOUR = { running: "--ok", starting: "--busy", stopping: "--busy", stopped: "--off", failed: "--bad" };
+
+const $ = (id) => document.getElementById(id);
+const trace = $("trace");
+let events = [], lastSeq = 0, paused = false, pausedCount = 0, stick = true, rowCount = 0, lastStatus = null;
+const inputRows = new Map();          // input number -> row element (for layer chips)
+
+// ---- filters ------------------------------------------------------------------------------------------------
+function filters() {
+  const kinds = new Set([...document.querySelectorAll("#kinds input:checked")].map((i) => i.value));
+  return { kinds, device: $("device").value, search: $("search").value.trim().toLowerCase(), jog: $("jog").checked,
+           blink: $("blinkfb").checked };
+}
+let F = filters();
+
+function visible(e) {
+  const group = KIND_GROUP[e.kind];
+  if (!group || group === "layer" || e.kind === "stats") return false;
+  if (group !== "error" && !F.kinds.has(group)) return false;
+  if (e.kind === "feedback" && !F.jog && e.function === "JogPlayPauseIndicator") return false;
+  if (e.kind === "feedback" && !F.blink && e.blink) return false;
+  if (F.device && (e.kind === "input" || e.kind === "send" || e.kind === "pickup" || e.kind === "unrecognised")
+      && e.position !== F.device) return false;
+  if (F.search && !(e.text || "").toLowerCase().includes(F.search)) return false;
+  return true;
+}
+
+// ---- rendering ----------------------------------------------------------------------------------------------
+function time(t) {
+  const d = new Date(t * 1000);
+  return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0");
+}
+const hex = (bytes) => bytes ? bytes.map((b) => b.toString(16).toUpperCase().padStart(2, "0")).join(" ") : "";
+
+const deviceNames = {};                 // position id -> the user's name for it, from the status
+function where(e) {
+  if (e.kind === "feedback") return e.deck ? `deck ${e.deck}` : "global";
+  const name = deviceNames[e.position] || e.position;
+  if (e.position) return e.half ? `${name} · ${e.half}` : name;
+  return "";
+}
+
+function what(e) {
+  switch (e.kind) {
+    case "input": {
+      const shift = e.shift ? " (shift)" : "";
+      const value = e.action === "press" || e.action === "release" ? "" : ` ${e.value > 0 && e.action === "turn" ? "+" : ""}${e.value}`;
+      const mods = e.modifiers && e.modifiers.length ? `  [held: ${e.modifiers.join(", ")}]` : "";
+      return `${e.control}${shift} ${e.action}${value}${mods}`;
+    }
+    case "send": return `→ ${e.function}${e.deck ? " deck " + e.deck : ""} ${e.value}`;
+    case "feedback": return `← ${e.function}${e.deck ? " deck " + e.deck : ""} = ${e.value}`;
+    default: return e.text || "";
+  }
+}
+
+function makeRow(e) {
+  const row = document.createElement("div");
+  const child = e.input && (e.kind === "send" || e.kind === "pickup");
+  row.className = "row " + e.kind + (child ? " child" : "") + (e.warning ? " warning" : "");
+  row.style.setProperty("--c", `var(${KIND_COLOUR[e.kind] || "--k-system"})`);
+  const cells = [time(e.t), KIND_LABEL[e.kind] || e.kind, where(e), what(e), hex(e.raw)];
+  ["t", "k", "w", "x", "raw"].forEach((cls, i) => {
+    const span = document.createElement("span");
+    span.className = cls;
+    span.textContent = cells[i];
+    if (cls === "w") span.title = cells[i];
+    row.appendChild(span);
+  });
+  if (e.kind === "error" && e.detail) row.title = e.detail;
+  if (e.kind === "input") {
+    inputRows.set(e.input, row);
+    if (inputRows.size > MAX_ROWS) inputRows.delete(inputRows.keys().next().value);
+  }
+  return row;
+}
+
+function addChip(e) {
+  const row = inputRows.get(e.input);
+  if (!row) return;
+  const chip = document.createElement("span");
+  chip.className = "chip" + (e.behaviour ? "" : " none");
+  chip.textContent = e.release ? `release ${e.behaviour}` : e.behaviour ? `${e.layer}: ${e.behaviour}` : "nothing bound";
+  row.querySelector(".x").appendChild(chip);
+}
+
+function append(list) {
+  const frag = document.createDocumentFragment();
+  let added = 0;
+  for (const e of list) {
+    if (e.kind === "binding") {
+      if (F.kinds.has("layer")) { flushFrag(frag); addChip(e); }
+      continue;
+    }
+    if (!visible(e)) continue;
+    frag.appendChild(makeRow(e));
+    added++;
+  }
+  flushFrag(frag);
+  rowCount += added;
+  while (rowCount > MAX_ROWS && trace.firstElementChild) {
+    const first = trace.firstElementChild;
+    if (first.id === "empty") { first.remove(); continue; }
+    first.remove();
+    rowCount--;
+  }
+  $("empty")?.remove();
+  if (stick) trace.scrollTop = trace.scrollHeight;
+  updateCounts();
+}
+function flushFrag(frag) { if (frag.childNodes.length) trace.appendChild(frag); }
+
+function renderAll() {
+  F = filters();
+  document.body.classList.toggle("nolayer", !F.kinds.has("layer"));
+  trace.replaceChildren();
+  inputRows.clear();
+  rowCount = 0;
+  // Render only the tail that will be kept, but include binding events so chips find their rows.
+  const shown = [];
+  let rows = 0;
+  for (let i = events.length - 1; i >= 0 && rows < MAX_ROWS; i--) {
+    const e = events[i];
+    if (e.kind === "binding") { shown.push(e); continue; }
+    if (visible(e)) { shown.push(e); rows++; }
+  }
+  shown.reverse();
+  if (!shown.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty"; empty.id = "empty";
+    empty.textContent = events.length ? "Nothing matches the filters." : "No events yet. Press something on a controller.";
+    trace.appendChild(empty);
+    updateCounts();
+    return;
+  }
+  stick = true;
+  append(shown);
+}
+
+function updateCounts() {
+  const p = paused ? ` · paused, ${pausedCount} new` : "";
+  $("counts").textContent = `${rowCount} shown · ${events.length} kept${p}`;
+}
+
+// ---- incoming events ----------------------------------------------------------------------------------------
+let pending = [];
+function receive(list) {
+  const fresh = [];
+  for (const e of list) {
+    if (e.seq <= lastSeq) continue;
+    lastSeq = e.seq;
+    if (e.kind === "view") continue;              // the main window's snapshot, not a trace event
+    if (e.kind === "stats") { showStats(e); continue; }
+    if (e.kind === "status" || e.kind === "supervisor" || e.kind === "bridge") scheduleStatus();
+    fresh.push(e);
+  }
+  if (!fresh.length) return;
+  events.push(...fresh);
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+  if (paused) { pausedCount += fresh.length; updateCounts(); return; }
+  pending.push(...fresh);
+  if (pending.length === fresh.length) requestAnimationFrame(() => { const p = pending; pending = []; append(p); });
+}
+
+function connect() {
+  const source = new EventSource(`/events?token=${encodeURIComponent(TOKEN)}`);
+  source.addEventListener("backlog", (m) => {
+    const list = JSON.parse(m.data);
+    if (list.length && list[list.length - 1].seq < lastSeq) {   // the app was restarted: start over
+      events = []; lastSeq = 0; renderAll();
+    }
+    receive(list);
+  });
+  source.onmessage = (m) => receive([JSON.parse(m.data)]);
+  source.onopen = () => { $("conn").textContent = "connected"; $("conn").classList.remove("down"); };
+  source.onerror = () => {
+    $("conn").textContent = "disconnected, retrying";
+    $("conn").classList.add("down");
+  };
+}
+
+// ---- status -------------------------------------------------------------------------------------------------
+let statusTimer = null;
+function scheduleStatus() { if (!statusTimer) statusTimer = setTimeout(() => { statusTimer = null; refresh(); }, 150); }
+
+async function refresh() {
+  try {
+    const r = await fetch(`/api/status?token=${encodeURIComponent(TOKEN)}`, { cache: "no-store" });
+    if (r.status === 403) return showGone();
+    showStatus(await r.json());
+  } catch { showGone(); }
+}
+
+function showGone() {
+  $("state").textContent = "not connected";
+  document.documentElement.style.setProperty("--state", "var(--off)");
+  $("banner").innerHTML = "";
+  const b = document.createElement("b"); b.textContent = "RekordTrakt isn't reachable. ";
+  $("banner").append(b, "If you quit or restarted the app, open this window again from its tray icon.");
+  $("banner").classList.add("show");
+  $("btn-toggle").disabled = $("btn-restart").disabled = true;
+}
+
+function duration(s) {
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h ? `${h}h ${m}m` : m ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+function showStatus(s) {
+  lastStatus = s;
+  const state = s.state;
+  const colour = state === "failed" && !s.wanted ? "--off" : STATE_COLOUR[state] || "--off";
+  document.documentElement.style.setProperty("--state", `var(${colour})`);
+  $("state").textContent = state === "failed" && s.restart_in != null ? "restarting" : state;
+  $("uptime").textContent = state === "running" && s.started_at ? `up ${duration(Date.now() / 1000 - s.started_at)}` : "";
+
+  const toggle = $("btn-toggle");
+  toggle.disabled = false;
+  toggle.textContent = s.wanted ? "Stop" : "Start";
+  $("btn-restart").disabled = !s.wanted;
+
+  const banner = $("banner");
+  banner.replaceChildren();
+  if (state === "failed" && s.error) {
+    const b = document.createElement("b"); b.textContent = "Translator stopped: ";
+    banner.append(b, s.error, s.restart_in != null ? `  Retrying in ${Math.ceil(s.restart_in)} s.` : "");
+    banner.classList.add("show");
+  } else banner.classList.remove("show");
+
+  // controllers
+  const devs = $("devices");
+  const entries = Object.entries(s.devices || {});
+  devs.replaceChildren();
+  if (!entries.length) {
+    const d = document.createElement("div"); d.className = "sub"; d.textContent = "waiting for the translator"; devs.appendChild(d);
+  }
+  const select = $("device"), chosen = select.value;
+  for (const [p, d] of entries) deviceNames[p] = d.name || p;
+  const names = entries.map(([p, d]) => `${p}=${d.name || p}`).join(",");
+  if (select.dataset.names !== names) {        // only rebuild when the list changes (it may be open)
+    select.dataset.names = names;
+    select.replaceChildren(new Option("All controllers", ""), ...entries.map(([p, d]) => new Option(d.name || p, p)));
+    select.value = entries.some(([p]) => p === chosen) ? chosen : "";
+  }
+  for (const [pos, d] of entries) {
+    const row = document.createElement("div"); row.className = "dev"; row.title = d.port;
+    const dot = document.createElement("span"); dot.className = "dot " + (d.connected ? "ok" : "bad");
+    const name = document.createElement("span"); name.className = "name"; name.textContent = d.name || pos;
+    const meta = document.createElement("span"); meta.className = "meta";
+    meta.textContent = `${d.profile} · decks ${d.decks.join("/")}${d.connected ? "" : " · not connected"}`;
+    row.append(dot, name, meta);
+    devs.appendChild(row);
+  }
+
+  // bridge
+  const bridge = s.bridge, fine = bridge && bridge.ok && !bridge.muted;
+  $("bridge-state").textContent = bridge ? (fine ? "connected" : bridge.muted ? "muted" : "problem") : "-";
+  $("bridge-state").style.color = bridge ? `var(${fine ? "--ok" : "--bad"})` : "";
+  $("bridge-msg").textContent = bridge && !fine ? bridge.message : "";    // details only when something needs fixing
+
+  // Rekordbox
+  $("rb-state").textContent = s.rekordbox_running == null ? "-" : s.rekordbox_running ? "running" : "not running";
+  $("rb-state").style.color = s.rekordbox_running ? "var(--ok)" : "var(--muted)";
+  const others = s.other_dj_software || [];
+  $("others").textContent = others.length ? others.join(", ") : "no other DJ software";
+  $("others").style.color = others.length ? "var(--warn)" : "var(--muted)";
+  const wl = $("warnings"); wl.replaceChildren();
+  for (const w of s.warnings || []) { const li = document.createElement("li"); li.textContent = w; wl.appendChild(li); }
+
+  // watchdog
+  $("w-restarts").textContent = s.restarts;
+  $("w-next").textContent = s.restart_in != null ? `in ${Math.ceil(s.restart_in)} s` : "-";
+  $("w-dropped").textContent = s.app.dropped_events;
+  $("w-login").textContent = s.app.start_at_login ? "on" : "off";
+  $("version").textContent = `v${s.app.version}`;
+  if (state !== "running") showStats(null);
+}
+
+// The last minute of traffic, one point per second, drawn as three lines.
+const history = { events: [], sent: [], feedback: [] };
+function drawSpark() {
+  const svg = $("spark");
+  const n = 60, all = [...history.events, ...history.sent, ...history.feedback];
+  const max = Math.max(4, ...all);
+  const line = (data, colour) => {
+    const pts = data.map((v, i) => `${((n - data.length + i) / (n - 1)) * 200},${34 - (v / max) * 32}`).join(" ");
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    p.setAttribute("points", pts);
+    p.setAttribute("stroke", `var(${colour})`);
+    return p;
+  };
+  svg.replaceChildren(line(history.feedback, "--k-feedback"), line(history.sent, "--k-send"), line(history.events, "--k-input"));
+}
+function showStats(e) {
+  const ps = e ? e.per_second : null;
+  if (ps) {
+    for (const k of ["events", "sent", "feedback"]) {
+      history[k].push(ps[k]);
+      if (history[k].length > 60) history[k].shift();
+    }
+    drawSpark();
+  }
+  $("r-in").textContent = ps ? ps.events.toFixed(0) : "-";
+  $("r-out").textContent = ps ? ps.sent.toFixed(0) : "-";
+  $("r-fb").textContent = ps ? ps.feedback.toFixed(0) : "-";
+  $("r-wait").textContent = e ? `${e.max_queue_ms.toFixed(1)} ms` : "-";
+  if (e && lastStatus && lastStatus.state === "running" && lastStatus.started_at)
+    $("uptime").textContent = `up ${duration(Date.now() / 1000 - lastStatus.started_at)}`;
+}
+
+// ---- actions ------------------------------------------------------------------------------------------------
+async function action(name) {
+  try {
+    const r = await fetch(`/api/${name}`, { method: "POST", headers: { "X-RekordTrakt-Token": TOKEN } });
+    const body = await r.json();
+    if (body.result && body.result.state) showStatus(body.result);
+  } catch { showGone(); }
+  setTimeout(refresh, 400);
+}
+$("btn-toggle").onclick = () => action(lastStatus && lastStatus.wanted ? "stop" : "start");
+$("btn-restart").onclick = () => action("restart");
+$("open-log").onclick = () => action("open-log-folder");
+
+$("btn-pause").onclick = () => {
+  paused = !paused;
+  $("btn-pause").textContent = paused ? "Resume" : "Pause";
+  if (!paused) { pausedCount = 0; renderAll(); } else updateCounts();
+};
+$("btn-clear").onclick = () => { events = []; renderAll(); };
+$("btn-export").onclick = () => {
+  const lines = events.filter((e) => e.kind === "binding" || visible(e)).map((e) => JSON.stringify(e)).join("\n");
+  const blob = new Blob([lines + "\n"], { type: "application/x-ndjson" });
+  const a = document.createElement("a");
+  const d = new Date(), pad = (n) => String(n).padStart(2, "0");
+  a.download = `rekordtrakt-trace-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.jsonl`;
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+for (const el of document.querySelectorAll("#kinds input, #device, #jog, #blinkfb")) el.addEventListener("change", renderAll);
+$("raw").addEventListener("change", () => document.body.classList.toggle("raw", $("raw").checked));
+let searchTimer;
+$("search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(renderAll, 150); });
+
+trace.addEventListener("scroll", () => {
+  stick = trace.scrollHeight - trace.scrollTop - trace.clientHeight < 40;
+  $("jump").classList.toggle("show", !stick);
+});
+$("jump").onclick = () => { stick = true; trace.scrollTop = trace.scrollHeight; $("jump").classList.remove("show"); };
+
+// Remember the view settings between windows (this window has its own browser profile).
+const SAVED = ["raw", "jog", "blinkfb"];
+try {
+  const saved = JSON.parse(localStorage.getItem("rt-debug") || "{}");
+  for (const id of SAVED) if (id in saved) $(id).checked = saved[id];
+  if (saved.kinds) for (const i of document.querySelectorAll("#kinds input")) i.checked = saved.kinds.includes(i.value);
+} catch {}
+function save() {
+  try {
+    localStorage.setItem("rt-debug", JSON.stringify({
+      raw: $("raw").checked, jog: $("jog").checked, blinkfb: $("blinkfb").checked,
+      kinds: [...document.querySelectorAll("#kinds input:checked")].map((i) => i.value),
+    }));
+  } catch {}
+}
+for (const el of document.querySelectorAll("#kinds input, #raw, #jog, #blinkfb")) el.addEventListener("change", save);
+document.body.classList.toggle("raw", $("raw").checked);
+
+F = filters();
+document.body.classList.toggle("nolayer", !F.kinds.has("layer"));
+refresh();
+setInterval(refresh, 2000);
+connect();
+</script>
+</body>
+</html>
