@@ -2,6 +2,8 @@
 
 Play Rekordbox with Traktor Kontrol controllers. RekordTrakt sits between your Kontrol X1 MK3s and F1s and Rekordbox, and adds what Rekordbox's own MIDI mapping can't do: tap and hold, Shift and held-button layers, pages, several actions on one control, timed sequences, LEDs that follow Rekordbox, and a window that shows what every control does right now.
 
+![The Controllers tab: two Kontrol X1 MK3s and two F1s, each control labelled with what it does now](assets/screenshots/controllers.jpg)
+
 ## Features
 
 - **The X1 MK3 Performance Mod, for Rekordbox.** The X1 preset re-creates the community X1MK3 Performance Mod as closely as Rekordbox allows: Sync tap/hold with a tempo layer, eight hot cues, memory cues, vinyl brake, Browser Mode, both of the mod's encoder styles, and FX-section pages (Mixer, Stems, FX, SFX, Colour FX). Each X1 half drives its own deck.
@@ -36,6 +38,10 @@ Uninstalling (Settings › Apps) quits RekordTrakt and puts Rekordbox's MIDI map
 - **Settings** has each controller's decks, options and FX-section pages, your mapping (edit, export, import, reset), the MIDI devices on this PC, the Rekordbox mapping file, and Start with Windows.
 - **Debug** shows everything RekordTrakt receives and sends, live.
 - **The header** shows anything that needs attention (click it for the fix), **Bypass** (your controllers send nothing to Rekordbox), **Theme**, **Support** and which Rekordbox is running.
+
+![Settings for an X1 MK3: its decks, FX-section pages, behaviour options and your mapping](assets/screenshots/settings.jpg)
+
+![The Debug tab: the connection, live traffic and everything RekordTrakt receives and sends](assets/screenshots/debug.jpg)
 
 On the X1 MK3 (Performance Mod preset), hold **both FX Assign buttons** on a half for setup: hot cue 1-4 picks the deck, FX buttons 1/2 the FX unit, PLAY the vinyl brake, SYNC the encoder style, Browse the beat-jump size and Loop the large tempo step. **Shift + FX Assign 1 / 2** steps through the FX-section pages, and **Shift + FX button 4** turns Browser Mode on and off.
 
