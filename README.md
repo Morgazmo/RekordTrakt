@@ -15,8 +15,9 @@ Play Rekordbox with Traktor Kontrol controllers. RekordTrakt sits between your K
 ## Requirements
 
 - **Windows 11.** Version 25H2 or later includes Windows MIDI Services, which RekordTrakt uses for its connection to Rekordbox. On earlier versions, the window explains how to use loopMIDI instead.
-- **Rekordbox 6.8.7** with MIDI mapping available: a Pioneer DJ Hardware Unlock device (a DDJ-XP1, for example) connected, or a paid plan.
-- **Rekordbox 7** locks MIDI mapping without a paid plan; a Hardware Unlock device doesn't unlock it. RekordTrakt builds its mapping for Rekordbox 7 when you run it, but hasn't been tested on a paid plan yet.
+- **Rekordbox 6 or 7**, with its MIDI mapping available. RekordTrakt detects which one you run and builds its MIDI mapping for it, including Rekordbox 7's own functions (the Bass stem, Drum Swap and more). Both read the same mapping folder, so you can switch between them.
+  - Rekordbox 6 needs a Pioneer DJ Hardware Unlock device (a DDJ-XP1, for example) connected, or a paid plan.
+  - Rekordbox 7 needs a paid plan: a Hardware Unlock device doesn't unlock its MIDI mapping.
 - **Controllers in MIDI mode:** on the X1 MK3, hold Shift and press Mode; on the F1, hold Shift and press Browse (with NI's default Controller Editor template).
 
 ## Install
@@ -44,7 +45,8 @@ On the X1 MK3 (Performance Mod preset), hold **both FX Assign buttons** on a hal
 |---|---|
 | Rekordbox 6.8.7 with a DDJ-XP1 (Hardware Unlock) | Tested on one rig: two X1 MK3s and two F1s in MIDI mode |
 | Bridge latency (Rekordbox 6.8.7) | Median round trip 18 ms; worst 54 ms under heavy knob and LED traffic; nothing missed |
-| Rekordbox 7 on a paid plan | Built for, not yet tested |
+| Other Rekordbox 6 versions | Supported. Functions are checked against 6.8.7; one a version doesn't have does nothing, and the window says so |
+| Rekordbox 7 on a paid plan | Supported (functions checked against 7.2.19), not yet tested |
 | The X1's beat-jump size of 1 beat (Rekordbox's beat-jump pads) | Not yet tested |
 | ARM64 PCs | Not supported by the installer yet |
 | HID mode (the X1's screens and colours) | Not supported |
