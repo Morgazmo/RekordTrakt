@@ -19,7 +19,8 @@ RIG_FILE = paths.DATA_DIR / "rig.json"
 # A source checkout before 1.0 kept the rig next to the code: moved on first run (never under test).
 OLD_RIG_FILE = None if os.environ.get("REKORDTRAKT_HOME") else paths.PACKAGE_DIR.parent / "rig.local.json"
 BRIDGE_PORTS = {"app_port": "RekordTrakt App", "rekordbox_port": "RekordTrakt Bridge"}
-PORT_HINTS = {"x1mk3": "X1 MK3", "f1": "F1"}
+PORT_HINTS = {"x1mk3": "X1 MK3", "x1mk2": "X1 MK2", "x1mk1": "KONTROL X1", "f1": "F1",
+              "akai_amx": "AMX", "akai_afx": "AFX"}
 
 
 def new_rig():
@@ -161,7 +162,9 @@ def identify(winmm, path=RIG_FILE, timeout=60):
                     port, status, *_ = q.get(timeout=max(0.1, deadline - time.monotonic()))
                 except queue.Empty:
                     raise TimeoutError(f"nothing pressed for '{pos}'") from None
-                hint = PORT_HINTS[d["type"]].lower()
+                # Learned and imported definitions may not have a legacy CLI hint. Their exact saved port is the
+                # safest fallback; the desktop setup flow does not need this interactive helper at all.
+                hint = PORT_HINTS.get(d["type"], d.get("port", "")).lower()
                 if hint in port.lower() and port not in taken:
                     d["port"] = port
                     taken.add(port)

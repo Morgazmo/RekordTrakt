@@ -335,15 +335,16 @@ function rekordboxPage() {
 
 function midiPage() {
   const names = { added: ["In use", "ok"], supported: ["Supported", "info"], rekordbox: ["Rekordbox", ""],
-                  unknown: ["Not set up", ""], bridge: ["Bridge", ""] };
-  const order = ["added", "supported", "rekordbox", "unknown", "bridge"];   // what you use first, the plumbing last
+                  layout: ["Layout ready", "warn"], unknown: ["Not set up", ""], bridge: ["Bridge", ""] };
+  const order = ["added", "supported", "layout", "rekordbox", "unknown", "bridge"]; // what you use first
   const list = [...(app.midiDevices || [])].sort((x, y) => order.indexOf(x.status) - order.indexOf(y.status))
     .map((d) => {
       const [text, cls] = names[d.status] || [d.status, ""];
       return row(d.port, d.text, tag(text, cls), ...(midiAction(d) || [el("span", "btn-slot")]));
     });
   const how = card("Importing a mapping file",
-    el("p", "note", "Import reads a controller mapping in the .midi.xml format (one file per controller) and makes it a controller here, with each of its buttons, knobs and LEDs. Controls the file links straight to a function (play, cue, hot cues, loops, EQ and more) do the same in Rekordbox. Controls it drives with its own scripts aren't imported: they're listed so you can set them in the mapping editor. Nothing in the file is run."));
+    el("p", "note", "Import reads a controller mapping in the .midi.xml format (one file per controller) and makes it a controller here, with each of its buttons, knobs and LEDs. Controls the file links straight to a function (play, cue, hot cues, loops, EQ and more) do the same in Rekordbox. Controls it drives with its own scripts aren't imported: they're listed so you can set them in the mapping editor. Nothing in the file is run."),
+    el("p", "note", "A device marked Layout ready already has its faceplate here: add it, then use MIDI on its card to learn each control from the hardware, and TEST to check them without operating Rekordbox."));
   return [title("MIDI devices", "Every MIDI input on this PC"),
           columns([card("Connected now", ...(list.length ? list : [el("p", "note", "Looking")]))], [how])];
 }
@@ -351,9 +352,12 @@ function midiPage() {
 // The row's button (and the file picker it opens), or null for none.
 function midiAction(d) {
   const after = (text) => { toast(text); loadMidiDevices(); setTimeout(() => emit("definitions"), 1500); };
-  if (d.status === "supported")
+  if (d.status === "supported" || d.status === "layout")
     return [button("Add", "", async () => {
-      try { await post("device-add", { port: d.port, type: d.type }); after(`${d.port} added`); } catch (e) { toast(e.message, true); }
+      try {
+        await post("device-add", { port: d.port, type: d.type });
+        after(d.status === "layout" ? `${d.port} added; use MIDI Learn on its controller card` : `${d.port} added`);
+      } catch (e) { toast(e.message, true); }
     })];
   if (d.status === "added")
     return [button("Remove", "", async () => {

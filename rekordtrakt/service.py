@@ -265,7 +265,9 @@ class Translator:
             v = int(value)
             if action == VALUE and not 0 <= v <= 127 or action == TURN and not -16 <= v <= 16:
                 raise ValueError("value out of range")
-            if shift and not getattr(dev.device, "has_shift", False):
+            supports_shift = getattr(dev.device, "supports_shift", None)
+            if shift and not (getattr(dev.device, "has_shift", False) or
+                              callable(supports_shift) and supports_shift(control)):
                 raise ValueError(f"{position} has no Shift layer")
             eng.handle(Event(position, control, action, v, bool(shift), "ui"))
         return self.call(run)
@@ -311,6 +313,14 @@ class Translator:
             return {"rekordtrakt_mapping": 1, "device_type": dev.device.type_name,
                     "preset": dev.profile or dev.device.type_name, "name": dev.name, "mapping": dev.mapping}
         return self.call(run)
+
+    def set_device_test(self, position, on):
+        return self.call(lambda eng: eng.set_device_test(_device(eng, position).position, bool(on)))
+
+    def replace_device_definition(self, position, definition):
+        from rekordtrakt.devices.defined import DefinedDevice
+        return self.call(lambda eng: eng.replace_device_definition(position, DefinedDevice(definition),
+                                                                    definition.get("template")))
 
     def import_mapping(self, position, data):
         def run(eng):

@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "type": "akai_afx",
+  "name": "Akai AFX",
+  "maker": "Akai Professional",
+  "midi_mode": "Connect the AFX by USB. Learn its controls with MIDI on its card.",
+  "midi": {
+    "status": "capture_required",
+    "note": "Physical controls are packaged from the official manual; no sufficiently trustworthy complete MIDI address map has been found.",
+    "source": "Akai AFX User Guide v1.1"
+  },
+  "port_hints": ["AFX"],
+  "halves": [],
+  "deck_slots": [{"key":"a","label":"Selected deck","default":1}],
+  "fx_slots": [
+    {"key":"fxa","label":"FX bank A","default":1},
+    {"key":"fxb","label":"FX bank B","default":2}
+  ],
+  "shift": {"style":"none","note":"Shift is exposed as a normal learnable control"},
+  "led_interval": 0.01,
+  "led_values": "velocity",
+  "controls": [
+    {"id":"deck_13","kind":"button","name":"Deck 1 / 3"},{"id":"deck_24","kind":"button","name":"Deck 2 / 4"},
+    {"id":"shift","kind":"button","name":"Shift"},{"id":"touch","kind":"button","name":"Touch mode"},{"id":"quantize","kind":"button","name":"Quantize"},
+    {"id":"touch_strip","kind":"fader","name":"Endless touch strip"},
+    {"id":"search_abs","kind":"button","name":"Search / Absolute"},{"id":"pitch_rel","kind":"button","name":"Pitch / Relative"},{"id":"sfx_int","kind":"button","name":"Strip FX / Internal"},
+    {"id":"fxa_button_1","kind":"button","name":"FX A 1"},{"id":"fxa_knob_1","kind":"knob","name":"FX A knob 1"},
+    {"id":"fxa_button_2","kind":"button","name":"FX A 2"},{"id":"fxa_knob_2","kind":"knob","name":"FX A knob 2"},
+    {"id":"fxa_button_3","kind":"button","name":"FX A 3"},{"id":"fxa_knob_3","kind":"knob","name":"FX A knob 3"},
+    {"id":"fxa_tap","kind":"button","name":"FX A tap / mode"},{"id":"fxa_beat","kind":"encoder","name":"FX A beat"},{"id":"fxa_assign","kind":"button","name":"FX A assign"},
+    {"id":"fxb_button_1","kind":"button","name":"FX B 1"},{"id":"fxb_knob_1","kind":"knob","name":"FX B knob 1"},
+    {"id":"fxb_button_2","kind":"button","name":"FX B 2"},{"id":"fxb_knob_2","kind":"knob","name":"FX B knob 2"},
+    {"id":"fxb_button_3","kind":"button","name":"FX B 3"},{"id":"fxb_knob_3","kind":"knob","name":"FX B knob 3"},
+    {"id":"fxb_tap","kind":"button","name":"FX B tap / mode"},{"id":"fxb_beat","kind":"encoder","name":"FX B beat"},{"id":"fxb_assign","kind":"button","name":"FX B assign"},
+    {"id":"parameter","kind":"encoder","name":"Pad parameter"},{"id":"record_loop","kind":"button","name":"Record / Loop"},{"id":"start_on","kind":"button","name":"Start / On"},
+    {"id":"pad_1","kind":"button","name":"Pad 1"},{"id":"pad_2","kind":"button","name":"Pad 2"},{"id":"pad_3","kind":"button","name":"Pad 3"},{"id":"pad_4","kind":"button","name":"Pad 4"},
+    {"id":"pad_5","kind":"button","name":"Pad 5"},{"id":"pad_6","kind":"button","name":"Pad 6"},{"id":"pad_7","kind":"button","name":"Pad 7"},{"id":"pad_8","kind":"button","name":"Pad 8"}
+  ],
+  "layout": {
+    "columns": ["1fr","1fr","1fr","1fr","1fr","1fr","1fr","1fr"],
+    "items": [
+      {"control":"deck_13","c":1,"r":1,"w":2,"shape":"key","glyph":"DECK 1 / 3"},{"role":"deck","half":null,"c":3,"r":1,"w":4,"label":"Selected deck"},{"control":"deck_24","c":7,"r":1,"w":2,"shape":"key","glyph":"DECK 2 / 4"},
+      {"control":"touch_strip","c":1,"r":2,"w":8,"shape":"key","glyph":"ENDLESS TOUCH STRIP"},
+      {"control":"search_abs","c":2,"r":3,"w":2,"shape":"key","glyph":"SEARCH / ABS"},{"control":"pitch_rel","c":4,"r":3,"w":2,"shape":"key","glyph":"PITCH / REL"},{"control":"sfx_int","c":6,"r":3,"w":2,"shape":"key","glyph":"S-FX / INT"},
+      {"control":"fxa_button_1","c":1,"r":4,"shape":"round","glyph":"1"},{"control":"fxa_knob_1","c":2,"r":4,"shape":"knob"},{"control":"fxb_knob_1","c":7,"r":4,"shape":"knob"},{"control":"fxb_button_1","c":8,"r":4,"shape":"round","glyph":"1"},
+      {"control":"fxa_button_2","c":1,"r":5,"shape":"round","glyph":"2"},{"control":"fxa_knob_2","c":2,"r":5,"shape":"knob"},{"control":"fxb_knob_2","c":7,"r":5,"shape":"knob"},{"control":"fxb_button_2","c":8,"r":5,"shape":"round","glyph":"2"},
+      {"control":"fxa_button_3","c":1,"r":6,"shape":"round","glyph":"3"},{"control":"fxa_knob_3","c":2,"r":6,"shape":"knob"},{"control":"touch","c":3,"r":6,"w":2,"shape":"key","glyph":"TOUCH"},{"control":"quantize","c":5,"r":6,"w":2,"shape":"key","glyph":"QUANT"},{"control":"fxb_knob_3","c":7,"r":6,"shape":"knob"},{"control":"fxb_button_3","c":8,"r":6,"shape":"round","glyph":"3"},
+      {"control":"fxa_tap","c":1,"r":7,"shape":"key","glyph":"TAP"},{"control":"fxa_beat","c":2,"r":7,"shape":"encoder"},{"control":"shift","c":4,"r":7,"w":2,"shape":"key","glyph":"SHIFT"},{"control":"fxb_beat","c":7,"r":7,"shape":"encoder"},{"control":"fxb_tap","c":8,"r":7,"shape":"key","glyph":"TAP"},
+      {"control":"fxa_assign","c":1,"r":8,"w":2,"shape":"key","glyph":"FX A"},{"role":"display","c":3,"r":8,"note":"Parameter value"},{"control":"parameter","c":4,"r":8,"w":2,"shape":"encoder"},{"role":"display","c":6,"r":8,"note":"Velocity value"},{"control":"fxb_assign","c":7,"r":8,"w":2,"shape":"key","glyph":"FX B"},
+      {"control":"record_loop","c":2,"r":9,"w":2,"shape":"key","glyph":"REC / LOOP"},{"control":"start_on","c":6,"r":9,"w":2,"shape":"key","glyph":"START / ON"},
+      {"control":"pad_1","c":1,"r":10,"w":2,"shape":"pad","glyph":"1"},{"control":"pad_2","c":3,"r":10,"w":2,"shape":"pad","glyph":"2"},{"control":"pad_3","c":5,"r":10,"w":2,"shape":"pad","glyph":"3"},{"control":"pad_4","c":7,"r":10,"w":2,"shape":"pad","glyph":"4"},
+      {"control":"pad_5","c":1,"r":11,"w":2,"shape":"pad","glyph":"5"},{"control":"pad_6","c":3,"r":11,"w":2,"shape":"pad","glyph":"6"},{"control":"pad_7","c":5,"r":11,"w":2,"shape":"pad","glyph":"7"},{"control":"pad_8","c":7,"r":11,"w":2,"shape":"pad","glyph":"8"}
+    ],
+    "source": "Akai AFX User Guide v1.1, top-panel diagram; spacing compacted"
+  }
+}

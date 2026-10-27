@@ -5,6 +5,8 @@ __pycache__/
 *.log
 /build/
 /dist/
+.browser-test-*/
+/tmp/
 tools/bridge-helper/bin/
 tools/bridge-helper/obj/
 tools/bridge-helper/local-packages/

@@ -20,11 +20,14 @@ VALUES = (0, 1, 2, 63, 64, 65, 126, 127)
 
 
 class Parity(unittest.TestCase):
-    def check(self, legacy, new):
+    def check(self, legacy, new, allow_shifted_extras=False):
         for status in range(0x80, 0xC0):
             for d1 in range(128):
                 for d2 in VALUES:
-                    self.assertEqual(legacy.decode(status, d1, d2), new.decode(status, d1, d2),
+                    old, current = legacy.decode(status, d1, d2), new.decode(status, d1, d2)
+                    if allow_shifted_extras and old is None and current is not None and current.shift:
+                        continue
+                    self.assertEqual(old, current,
                                      f"{status:02X} {d1:02X} {d2:02X}")
         self.assertEqual(sorted(legacy.led_controls()), sorted(new.led_controls()))
         names = {n for n, _ in legacy.controls()} | set(new.led_controls())
@@ -39,7 +42,40 @@ class Parity(unittest.TestCase):
         self.check(LegacyX1MK3(), DEVICE_TYPES["x1mk3"]())
 
     def test_f1(self):
-        self.check(LegacyF1(), DEVICE_TYPES["f1"]())
+        self.check(LegacyF1(), DEVICE_TYPES["f1"](), allow_shifted_extras=True)
+
+    def test_f1_second_hardware_page(self):
+        dev = DEVICE_TYPES["f1"]()
+        for n in range(16):
+            press = dev.decode(0xB0 + n, 20 + n, 127)
+            release = dev.decode(0xB0 + n, 20 + n, 0)
+            self.assertEqual((press.control, press.kind, press.shift), (f"pad_{n + 1}", "press", True))
+            self.assertEqual((release.control, release.kind, release.shift), (f"pad_{n + 1}", "release", True))
+        self.assertEqual(dev.decode(0xB1, 12, 127).control, "sync")
+        self.assertTrue(dev.decode(0xB1, 12, 127).shift)
+        self.assertEqual((dev.decode(0xBC, 41, 1).control, dev.decode(0xBC, 41, 1).value,
+                          dev.decode(0xBC, 41, 1).shift), ("encoder", 1, True))
+        self.assertEqual((dev.decode(0xBC, 42, 127).control, dev.decode(0xBC, 42, 127).shift),
+                         ("encoder_push", True))
+
+    def test_x1mk1_documented_base_and_shift_banks(self):
+        dev = DEVICE_TYPES["x1mk1"]()
+        self.assertEqual((dev.decode(0xB0, 0, 64).control, dev.decode(0xB0, 0, 64).value),
+                         ("L.fx_knob_1", 64))
+        shifted = dev.decode(0xB0, 44, 65)
+        self.assertEqual((shifted.control, shifted.value, shifted.shift), ("L.fx_knob_1", 65, True))
+        self.assertEqual(dev.decode(0xB0, 16, 1).value, 1)
+        self.assertEqual(dev.decode(0xB0, 16, 127).value, -1)
+        self.assertEqual((dev.decode(0xB0, 40, 127).control, dev.decode(0xB0, 40, 127).kind),
+                         ("L.play", "press"))
+
+    def test_amx_community_map_decodes_notes_ccs_and_encoders(self):
+        dev = DEVICE_TYPES["akai_amx"]()
+        self.assertEqual(dev.decode(0x90, 10, 127).control, "play_l")
+        self.assertEqual((dev.decode(0xB0, 1, 80).control, dev.decode(0xB0, 1, 80).value),
+                         ("crossfader", 80))
+        self.assertEqual((dev.decode(0xB0, 59, 127).control, dev.decode(0xB0, 59, 127).value),
+                         ("browse", -1))
 
 
 class Layouts(unittest.TestCase):
@@ -79,6 +115,18 @@ class Validation(unittest.TestCase):
         bad = json.loads(json.dumps(DEVICE_TYPES["f1"]().definition))
         enc = next(c for c in bad["controls"] if c["kind"] == "encoder")
         del enc["in"]["relative"]
+        with self.assertRaises(DefinitionError):
+            DefinedDevice(bad)
+
+    def test_layout_only_controls_are_public_but_do_not_decode(self):
+        dev = DEVICE_TYPES["x1mk2"]()
+        self.assertIn(("L.play", "press"), dev.controls())
+        self.assertFalse(dev.public()["controls"]["L.play"]["mapped"])
+        self.assertIsNone(dev.decode(0x90, 1, 127))
+
+    def test_unmapped_controls_cannot_claim_an_led_or_alternate(self):
+        bad = json.loads(json.dumps(DEVICE_TYPES["x1mk2"]().definition))
+        bad["controls"][0]["led"] = True
         with self.assertRaises(DefinitionError):
             DefinedDevice(bad)
 

@@ -3,6 +3,7 @@
 Run from the repo root:  python -m unittest discover -s tests
 """
 import json
+import copy
 import sys
 import unittest
 from pathlib import Path
@@ -15,6 +16,7 @@ from rekordtrakt.bridge.client import BridgeClient            # noqa: E402
 from rekordtrakt.bridge.compiler import canonical_mappings, compile_bridge  # noqa: E402
 from rekordtrakt.engine.engine import Engine                  # noqa: E402
 from rekordtrakt.engine.leds import LedEngine                 # noqa: E402
+from rekordtrakt.devices.defined import DefinedDevice         # noqa: E402
 from rekordtrakt.profiles import PROFILES                     # noqa: E402
 from rekordtrakt.rekordbox.registry import bridge_actions      # noqa: E402
 
@@ -103,6 +105,30 @@ class X1Tests(unittest.TestCase):
         e = self.r.entries[("Cue", 1)]["input"]
         self.assertEqual(self.r.out.sent[-1], (e["status"], e["data1"], 0))   # note-on, velocity 0
         self.assertEqual(e["status"] & 0xF0, 0x90)
+
+    def test_device_test_decodes_controls_without_sending_to_rekordbox(self):
+        self.r.engine.set_device_test("x1_left", True)
+        self.r.msg("x1_left", 0x90, 0x0A, 0x7F)
+        self.assertEqual(self.r.sent(), [])
+        self.assertIn(("x1_left", "L.play"), self.r.engine.down)
+        view = next(d for d in self.r.engine.view()["devices"] if d["position"] == "x1_left")
+        self.assertTrue(view["midi_test"])
+        self.r.engine.set_device_test("x1_left", False)
+        self.r.msg("x1_left", 0x90, 0x0A, 0x7F)
+        self.assertEqual(self.r.sent(), [("PlayPause", 1, 127)])
+
+    def test_a_learned_device_keeps_the_bundled_profile_when_adopted_live(self):
+        rig = rig_mod.new_rig()
+        position = rig_mod.with_device(rig, "X1 MK2", "x1mk2")
+        dev = rig_mod.device_configs(rig)[0]
+        engine = Engine([dev], PROFILES, None, None, self.r.clock)
+        definition = copy.deepcopy(dev.device.definition)
+        definition["type"], definition["template"] = "learned_x1mk2_test", "x1mk2"
+        next(c for c in definition["controls"] if c["id"] == "L.play")["in"] = {
+            "msg": "note", "ch": 1, "num": 22}
+        engine.replace_device_definition(position, DefinedDevice(definition), definition["template"])
+        self.assertEqual((dev.profile, engine.profile(dev).title), ("x1mk2", "X1 MK2 basic"))
+        self.assertEqual(dev.device.decode(0x90, 22, 127).control, "L.play")
 
     def test_shift_layer_and_release_after_shift_let_go(self):
         self.r.msg("x1_left", 0x92, 0x02, 0x7F)      # Shift + hotcue 1 (channel 3)

@@ -149,10 +149,12 @@ class Definitions(unittest.TestCase):
     def test_the_window_gets_every_device_layout(self):
         from rekordtrakt.shell.app import definitions
         d = definitions()
-        self.assertEqual(set(d), {"x1mk3", "f1"})
+        self.assertEqual(set(d), {"x1mk3", "x1mk2", "x1mk1", "f1", "akai_amx", "akai_afx"})
         self.assertEqual(d["x1mk3"]["name"], "Kontrol X1 MK3")
         self.assertTrue(d["x1mk3"]["has_shift"])
         self.assertIn("layout", d["f1"])
+        self.assertEqual(d["x1mk2"]["midi"]["status"], "capture_required")
+        self.assertFalse(d["x1mk2"]["controls"]["L.play"]["mapped"])
         self.assertNotIn("in", next(iter(d["f1"]["controls"].values())))      # no MIDI details for the window
 
 

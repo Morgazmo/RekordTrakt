@@ -18,7 +18,7 @@ import json
 import re
 import xml.etree.ElementTree as ET
 
-ROOT_TAG = "MixxxControllerPreset"         # the format's root element
+ROOT_TAGS = {"MixxxControllerPreset", "MixxxMIDIPreset"}  # the format's root element: current and older files
 
 # key (per [ChannelN]) -> Rekordbox function
 DECK_KEYS = {
@@ -93,7 +93,7 @@ def parse(xml_text):
         root = ET.fromstring(xml_text)
     except ET.ParseError as e:
         raise MappingFileError(f"that isn't a .midi.xml mapping file ({e})") from None
-    if root.tag != ROOT_TAG:
+    if root.tag not in ROOT_TAGS:
         raise MappingFileError("that isn't a .midi.xml controller mapping")
     info = root.find("info")
     name = (info.findtext("name") if info is not None else None) or "Imported controller"
@@ -131,7 +131,10 @@ def to_rekordtrakt(xml_text, port_name=""):
         if "fourteen-bit-lsb" in c["options"]:
             continue                                   # the LSB half of a 14-bit pair: the MSB stands for the control
         key = (msg, ch, c["midino"])
-        relative = msg == "cc" and bool(c["options"] & RELATIVE_OPTIONS)
+        group_hint = c["group"].strip("[]").lower()
+        scripted_button = msg == "cc" and "button" in group_hint
+        scripted_encoder = msg == "cc" and "encoder" in group_hint
+        relative = msg == "cc" and (bool(c["options"] & RELATIVE_OPTIONS) or scripted_encoder)
         if key not in seen:
             base = c["description"] or f"{c['group'].strip('[]')} {c['key']}".strip()
             cid = _slug(base)
@@ -139,7 +142,7 @@ def to_rekordtrakt(xml_text, port_name=""):
             n, unique = 2, cid
             while unique in taken:
                 unique, n = f"{cid}_{n}", n + 1
-            control = {"id": unique, "kind": "button" if msg == "note" else "encoder" if relative else "knob",
+            control = {"id": unique, "kind": "button" if msg == "note" or scripted_button else "encoder" if relative else "knob",
                        "name": base[:40], "in": {"msg": msg, "ch": ch, "num": c["midino"]}}
             if relative:
                 control["in"]["relative"] = "twos_complement"
@@ -159,7 +162,7 @@ def to_rekordtrakt(xml_text, port_name=""):
             if not any(b["control"] == seen[key] for b in bindings):
                 bindings.append({"layer": "base", "page": None, "control": seen[key], "action": action})
                 translated += 1
-        elif c["key"] and "." in c["key"] or "script-binding" in c["options"]:
+        elif (c["key"] and "." in c["key"]) or "script-binding" in c["options"]:
             script.append(c["description"] or c["key"])
     if not controls:
         raise MappingFileError("that mapping has no MIDI controls RekordTrakt can read")
@@ -173,7 +176,7 @@ def to_rekordtrakt(xml_text, port_name=""):
     deck_slots = [{"key": "abcd"[i], "label": f"{ORDINALS[i]} deck", "default": n} for i, n in enumerate(channels)]
     # The id names the controller and fingerprints its messages: a different file with the same name is a new
     # controller type, never a silent change to one that's in use; the same file again is the same type.
-    messages = sorted((c["in"]["msg"], c["in"]["ch"], c["in"]["num"]) for c in controls)
+    messages = sorted((c["in"]["msg"], c["in"]["ch"], c["in"]["num"], c["kind"]) for c in controls)
     fingerprint = hashlib.sha1(json.dumps(messages).encode()).hexdigest()[:6]
     type_name = f"imported_{_slug(m['name'], 30)}_{fingerprint}"
     by = f" by {m['author']}" if m["author"] else ""

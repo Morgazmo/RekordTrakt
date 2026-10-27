@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "type": "x1mk2",
+  "name": "Kontrol X1 MK2",
+  "maker": "Native Instruments",
+  "midi_mode": "Hold Shift and press both Load buttons. Learn its controls with MIDI on its card.",
+  "midi": {
+    "status": "capture_required",
+    "note": "Physical layout is packaged; the stock Controller Editor MIDI addresses are not yet verified.",
+    "source": "Native Instruments X1 MK2 manual, top-panel overview pp. 8-10"
+  },
+  "port_hints": ["X1 MK2", "X1 MKII"],
+  "halves": ["L", "R"],
+  "shift": {"style": "none", "note": "Learn the base inputs first; shifted messages can be added from a contributed capture"},
+  "led_interval": 0.01,
+  "led_values": "velocity",
+  "controls": [
+    {"id":"L.fx_button_4","kind":"button","name":"FX Mode"},{"id":"L.fx_knob_4","kind":"knob","name":"FX Dry/Wet"},
+    {"id":"L.fx_button_1","kind":"button","name":"FX 1"},{"id":"L.fx_knob_1","kind":"knob","name":"FX Knob 1"},
+    {"id":"L.fx_button_2","kind":"button","name":"FX 2"},{"id":"L.fx_knob_2","kind":"knob","name":"FX Knob 2"},
+    {"id":"L.fx_button_3","kind":"button","name":"FX 3"},{"id":"L.fx_knob_3","kind":"knob","name":"FX Knob 3"},
+    {"id":"R.fx_button_4","kind":"button","name":"FX Mode"},{"id":"R.fx_knob_4","kind":"knob","name":"FX Dry/Wet"},
+    {"id":"R.fx_button_1","kind":"button","name":"FX 1"},{"id":"R.fx_knob_1","kind":"knob","name":"FX Knob 1"},
+    {"id":"R.fx_button_2","kind":"button","name":"FX 2"},{"id":"R.fx_knob_2","kind":"knob","name":"FX Knob 2"},
+    {"id":"R.fx_button_3","kind":"button","name":"FX 3"},{"id":"R.fx_knob_3","kind":"knob","name":"FX Knob 3"},
+    {"id":"L.fx_assign_1","kind":"button","name":"FX 1 Assign"},{"id":"L.fx_assign_2","kind":"button","name":"FX 2 Assign"},
+    {"id":"R.fx_assign_1","kind":"button","name":"FX 1 Assign"},{"id":"R.fx_assign_2","kind":"button","name":"FX 2 Assign"},
+    {"id":"L.browse","kind":"encoder","name":"Browse encoder"},{"id":"L.browse_push","kind":"button","name":"Browse push"},
+    {"id":"L.load","kind":"button","name":"Load Left"},{"id":"R.load","kind":"button","name":"Load Right"},
+    {"id":"L.loop","kind":"encoder","name":"Loop encoder"},{"id":"L.loop_push","kind":"button","name":"Loop push"},
+    {"id":"R.loop","kind":"encoder","name":"Loop encoder"},{"id":"R.loop_push","kind":"button","name":"Loop push"},
+    {"id":"L.touch_strip","kind":"fader","name":"Touch strip left"},{"id":"R.touch_strip","kind":"fader","name":"Touch strip right"},
+    {"id":"L.hotcue_1","kind":"button","name":"Hotcue 1"},{"id":"L.hotcue_2","kind":"button","name":"Hotcue 2"},
+    {"id":"L.hotcue_3","kind":"button","name":"Hotcue 3"},{"id":"L.hotcue_4","kind":"button","name":"Hotcue 4"},
+    {"id":"R.hotcue_1","kind":"button","name":"Hotcue 1"},{"id":"R.hotcue_2","kind":"button","name":"Hotcue 2"},
+    {"id":"R.hotcue_3","kind":"button","name":"Hotcue 3"},{"id":"R.hotcue_4","kind":"button","name":"Hotcue 4"},
+    {"id":"L.flux","kind":"button","name":"Flux / Tap"},{"id":"L.sync","kind":"button","name":"Sync / Master"},
+    {"id":"L.cue","kind":"button","name":"Cue"},{"id":"L.play","kind":"button","name":"Play"},
+    {"id":"R.flux","kind":"button","name":"Flux / Tap"},{"id":"R.sync","kind":"button","name":"Sync / Master"},
+    {"id":"R.cue","kind":"button","name":"Cue"},{"id":"R.play","kind":"button","name":"Play"}
+  ],
+  "layout": {
+    "columns": ["1fr","1fr","1fr","1fr","1fr","1fr","1fr","1fr"],
+    "items": [
+      {"role":"deck","half":"L","c":1,"r":1,"w":4},{"role":"deck","half":"R","c":5,"r":1,"w":4},
+      {"control":"L.fx_button_4","c":1,"r":2,"w":2,"shape":"round","glyph":"MODE"},{"control":"L.fx_knob_4","c":3,"r":2,"w":2,"shape":"knob"},{"control":"R.fx_knob_4","c":5,"r":2,"w":2,"shape":"knob"},{"control":"R.fx_button_4","c":7,"r":2,"w":2,"shape":"round","glyph":"MODE"},
+      {"control":"L.fx_button_1","c":1,"r":3,"w":2,"shape":"round","glyph":"FX 1"},{"control":"L.fx_knob_1","c":3,"r":3,"w":2,"shape":"knob"},{"control":"R.fx_knob_1","c":5,"r":3,"w":2,"shape":"knob"},{"control":"R.fx_button_1","c":7,"r":3,"w":2,"shape":"round","glyph":"FX 1"},
+      {"control":"L.fx_button_2","c":1,"r":4,"w":2,"shape":"round","glyph":"FX 2"},{"control":"L.fx_knob_2","c":3,"r":4,"w":2,"shape":"knob"},{"control":"R.fx_knob_2","c":5,"r":4,"w":2,"shape":"knob"},{"control":"R.fx_button_2","c":7,"r":4,"w":2,"shape":"round","glyph":"FX 2"},
+      {"control":"L.fx_button_3","c":1,"r":5,"w":2,"shape":"round","glyph":"FX 3"},{"control":"L.fx_knob_3","c":3,"r":5,"w":2,"shape":"knob"},{"control":"R.fx_knob_3","c":5,"r":5,"w":2,"shape":"knob"},{"control":"R.fx_button_3","c":7,"r":5,"w":2,"shape":"round","glyph":"FX 3"},
+      {"control":"L.fx_assign_1","c":1,"r":6,"w":2,"shape":"key","glyph":"FX 1"},{"control":"L.fx_assign_2","c":3,"r":6,"w":2,"shape":"key","glyph":"FX 2"},{"control":"R.fx_assign_1","c":5,"r":6,"w":2,"shape":"key","glyph":"FX 1"},{"control":"R.fx_assign_2","c":7,"r":6,"w":2,"shape":"key","glyph":"FX 2"},
+      {"control":"L.load","c":1,"r":7,"w":2,"shape":"key","glyph":"LOAD"},{"control":"L.browse","push":"L.browse_push","c":3,"r":7,"w":4,"shape":"encoder"},{"control":"R.load","c":7,"r":7,"w":2,"shape":"key","glyph":"LOAD"},
+      {"control":"L.loop","push":"L.loop_push","c":1,"r":8,"w":3,"shape":"encoder"},{"role":"shift","c":4,"r":8,"w":2,"note":"Shift is used for secondary functions and MIDI mode"},{"control":"R.loop","push":"R.loop_push","c":6,"r":8,"w":3,"shape":"encoder"},
+      {"role":"display","c":2,"r":9,"w":2,"note":"Left loop display"},{"role":"display","c":6,"r":9,"w":2,"note":"Right loop display"},
+      {"control":"L.touch_strip","c":1,"r":10,"w":4,"shape":"key","glyph":"TOUCH"},{"control":"R.touch_strip","c":5,"r":10,"w":4,"shape":"key","glyph":"TOUCH"},
+      {"control":"L.hotcue_1","c":1,"r":11,"w":2,"shape":"pad","glyph":"1"},{"control":"L.hotcue_2","c":3,"r":11,"w":2,"shape":"pad","glyph":"2"},{"control":"R.hotcue_1","c":5,"r":11,"w":2,"shape":"pad","glyph":"1"},{"control":"R.hotcue_2","c":7,"r":11,"w":2,"shape":"pad","glyph":"2"},
+      {"control":"L.hotcue_3","c":1,"r":12,"w":2,"shape":"pad","glyph":"3"},{"control":"L.hotcue_4","c":3,"r":12,"w":2,"shape":"pad","glyph":"4"},{"control":"R.hotcue_3","c":5,"r":12,"w":2,"shape":"pad","glyph":"3"},{"control":"R.hotcue_4","c":7,"r":12,"w":2,"shape":"pad","glyph":"4"},
+      {"control":"L.flux","c":1,"r":13,"w":2,"shape":"key","glyph":"FLUX"},{"control":"L.sync","c":3,"r":13,"w":2,"shape":"key","glyph":"SYNC"},{"control":"R.flux","c":5,"r":13,"w":2,"shape":"key","glyph":"FLUX"},{"control":"R.sync","c":7,"r":13,"w":2,"shape":"key","glyph":"SYNC"},
+      {"control":"L.cue","c":1,"r":14,"w":2,"shape":"round","glyph":"CUE","size":"large"},{"control":"L.play","c":3,"r":14,"w":2,"shape":"round","glyph":"PLAY","size":"large"},{"control":"R.cue","c":5,"r":14,"w":2,"shape":"round","glyph":"CUE","size":"large"},{"control":"R.play","c":7,"r":14,"w":2,"shape":"round","glyph":"PLAY","size":"large"}
+    ],
+    "source": "Native Instruments X1 MK2 manual, top-panel overview pp. 8-9; spacing compacted"
+  }
+}

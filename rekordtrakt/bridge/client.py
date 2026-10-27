@@ -47,9 +47,10 @@ class BridgeClient:
         """Press and release, unless something holds the target now: a tap would release it under them."""
         if self.held.get((function, deck)):
             self._input(function, deck)
-            return
+            return False
         self.press(function, deck)
         self.release(function, deck)
+        return True
 
     def set_on(self, function, deck, on):
         """For value-following functions (e.g. FXPartSelect*): set on/off without treating it as a held button."""

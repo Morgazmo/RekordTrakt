@@ -4,6 +4,7 @@ new file, not new code.
 
 Definition format (schema 1):
   type, name, maker, midi_mode, port_hints      what it is and how to put it in MIDI mode
+  port_excludes                                  optional substrings that disqualify a broad port hint
   halves                                         ["L", "R"] for a two-deck unit (control ids "L.x" / "R.x"), else []
                                                  (each half drives one deck and one FX unit, chosen in the window)
   deck_slots, fx_slots                           a unit without halves: the decks and FX units it drives, each
@@ -14,8 +15,10 @@ Definition format (schema 1):
                                                  n channels up; {"style": "none"} when Shift sends nothing
   led_interval                                   seconds between LED messages (some units drop bursts)
   led_values                                     "velocity" (values passed through, e.g. colours) or "on_off"
+  midi                                           {status: verified|community|capture_required|learned, note?, source?}
   controls[]                                     {id, kind: button|knob|fader|encoder, name,
-                                                  in: {msg: note|cc, ch: 1-16, num, relative?: offset64|twos_complement},
+                                                  in?: {msg: note|cc, ch: 1-16, num, relative?: offset64|twos_complement},
+                                                  alternates?: [{msg, ch, num, relative?, shift?: true}, ...],
                                                   led?: true (same message as the input) or {msg, ch, num}}
   layout                                         {columns: [css widths], items: [{control | role, c, r, w?, h?,
                                                   shape?, glyph?, push?, half?, ...}]}
@@ -65,23 +68,38 @@ class DefinedDevice:
                         key in RESERVED_KEYS and not (key == "fx" and slot in self.fx_slots)):
                     raise DefinitionError(f"{self.type_name}: '{key}' can't be a slot key")
         shift = definition.get("shift") or {}
-        self.has_shift = shift.get("style") == "channel_offset"
+        shift_style = shift.get("style")
+        self.has_shift = shift_style in ("channel_offset", "alternate_messages")
         self._velocity = definition.get("led_values") == "velocity"
         self._in = {}           # (msg, channel 0-15, number) -> (control id, kind, shifted, relative decoder)
         self._led = {}          # control id -> (status, number)
         self._controls = []
+        self._shift_controls = set()
         for c in definition["controls"]:
-            spec = c["in"]
-            if c["kind"] not in KINDS or spec["msg"] not in STATUS or not 1 <= spec["ch"] <= 16:
+            if c.get("kind") not in KINDS:
                 raise DefinitionError(f"{self.type_name}: bad control {c.get('id')}")
-            relative = RELATIVE.get(spec.get("relative"))
-            if c["kind"] == "encoder" and relative is None:
-                raise DefinitionError(f"{self.type_name}: encoder {c['id']} needs a relative style")
             self._controls.append((c["id"], KINDS[c["kind"]]))
-            self._claim((spec["msg"], spec["ch"] - 1, spec["num"]), (c["id"], c["kind"], False, relative))
-            if self.has_shift:
+            spec = c.get("in")
+            # A packaged physical layout may deliberately have no MIDI address yet. It is still useful on screen,
+            # can be mapped in the action editor, and can acquire addresses through the hardware learn workflow.
+            if spec is None:
+                if c.get("alternates") or c.get("led"):
+                    raise DefinitionError(f"{self.type_name}: unmapped control {c['id']} can't have alternates or LED")
+                continue
+            for i, source in enumerate([spec, *(c.get("alternates") or [])]):
+                if source.get("msg") not in STATUS or not 1 <= source.get("ch", 0) <= 16:
+                    raise DefinitionError(f"{self.type_name}: bad control {c.get('id')}")
+                relative = RELATIVE.get(source.get("relative"))
+                if c["kind"] == "encoder" and relative is None:
+                    raise DefinitionError(f"{self.type_name}: encoder {c['id']} needs a relative style")
+                if source.get("shift"):
+                    self._shift_controls.add(c["id"])
+                self._claim((source["msg"], source["ch"] - 1, source["num"]),
+                            (c["id"], c["kind"], bool(source.get("shift")), relative))
+            if shift_style == "channel_offset":
+                self._shift_controls.add(c["id"])
                 self._claim((spec["msg"], spec["ch"] - 1 + shift["offset"], spec["num"]),
-                            (c["id"], c["kind"], True, relative))
+                            (c["id"], c["kind"], True, RELATIVE.get(spec.get("relative"))))
             led = c.get("led")
             if led:
                 out = spec if led is True else led
@@ -129,13 +147,20 @@ class DefinedDevice:
         """Every control's physical kind: button, knob, fader or encoder (what the mapping editor offers)."""
         return {c["id"]: c["kind"] for c in self.definition["controls"]}
 
+    def supports_shift(self, control):
+        """Whether this particular control has a distinct shifted/page-2 input message."""
+        return control in self._shift_controls
+
     def public(self):
         """What the window needs: names, kinds, layout (no MIDI details)."""
         d = self.definition
+        midi = d.get("midi") or {"status": "verified"}
         return {"type": d["type"], "name": d["name"], "maker": d.get("maker"), "halves": d.get("halves", []),
                 "deck_slots": list(self.deck_slots), "fx_slots": list(self.fx_slots),
                 "has_shift": self.has_shift, "midi_mode": d.get("midi_mode"),
-                "controls": {c["id"]: {"kind": c["kind"], "name": c.get("name", c["id"]), "led": bool(c.get("led"))}
+                "midi": midi,
+                "controls": {c["id"]: {"kind": c["kind"], "name": c.get("name", c["id"]),
+                                       "led": bool(c.get("led")), "mapped": bool(c.get("in"))}
                              for c in d["controls"]},
                 "layout": d.get("layout", {})}
 
@@ -184,4 +209,17 @@ def save_user_definition(definition, folder=USER_DEFINITIONS_DIR):
     while definition["name"] in names:
         definition["name"], n = f"{base} ({n})", n + 1
     path.write_text(json.dumps(definition, indent=2), encoding="utf-8")
+    return definition["type"]
+
+
+def update_user_definition(definition, folder=USER_DEFINITIONS_DIR):
+    """Validate and atomically write a user-owned definition. Unlike ``save_user_definition`` this deliberately
+    replaces a definition of the same type; it is used only for a controller created by hardware learn."""
+    DefinedDevice(definition)
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{definition['type']}.json"
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(definition, indent=2), encoding="utf-8")
+    tmp.replace(path)
     return definition["type"]

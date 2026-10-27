@@ -3,7 +3,7 @@
  "type": "f1",
  "name": "Kontrol F1",
  "maker": "Native Instruments",
- "midi_mode": "MIDI mode: hold Shift and press Browse on the F1 (NI's default Controller Editor template)",
+ "midi_mode": "Hold Shift and press Browse. Matches the Controller Editor template Tekken's Kontrol F1 Ultimate Mapping v3.4; NI's default template isn't verified yet.",
  "port_hints": [
   "F1"
  ],
@@ -17,7 +17,7 @@
  ],
  "shift": {
   "style": "none",
-  "note": "Shift sends nothing in MIDI mode"
+  "note": "Shift toggles the Tekken template's two Controller Editor pages but sends no MIDI message itself"
  },
  "led_interval": 0.025,
  "led_values": "on_off",
@@ -31,6 +31,7 @@
     "ch": 1,
     "num": 58
    },
+   "alternates": [{"msg": "cc", "ch": 1, "num": 20, "shift": true}],
    "led": true
   },
   {
@@ -42,6 +43,7 @@
     "ch": 2,
     "num": 59
    },
+   "alternates": [{"msg": "cc", "ch": 2, "num": 21, "shift": true}],
    "led": true
   },
   {
@@ -53,6 +55,7 @@
     "ch": 3,
     "num": 60
    },
+   "alternates": [{"msg": "cc", "ch": 3, "num": 22, "shift": true}],
    "led": true
   },
   {
@@ -64,6 +67,7 @@
     "ch": 4,
     "num": 61
    },
+   "alternates": [{"msg": "cc", "ch": 4, "num": 23, "shift": true}],
    "led": true
   },
   {
@@ -75,6 +79,7 @@
     "ch": 5,
     "num": 62
    },
+   "alternates": [{"msg": "cc", "ch": 5, "num": 24, "shift": true}],
    "led": true
   },
   {
@@ -86,6 +91,7 @@
     "ch": 6,
     "num": 63
    },
+   "alternates": [{"msg": "cc", "ch": 6, "num": 25, "shift": true}],
    "led": true
   },
   {
@@ -97,6 +103,7 @@
     "ch": 7,
     "num": 64
    },
+   "alternates": [{"msg": "cc", "ch": 7, "num": 26, "shift": true}],
    "led": true
   },
   {
@@ -108,6 +115,7 @@
     "ch": 8,
     "num": 65
    },
+   "alternates": [{"msg": "cc", "ch": 8, "num": 27, "shift": true}],
    "led": true
   },
   {
@@ -119,6 +127,7 @@
     "ch": 9,
     "num": 66
    },
+   "alternates": [{"msg": "cc", "ch": 9, "num": 28, "shift": true}],
    "led": true
   },
   {
@@ -130,6 +139,7 @@
     "ch": 10,
     "num": 67
    },
+   "alternates": [{"msg": "cc", "ch": 10, "num": 29, "shift": true}],
    "led": true
   },
   {
@@ -141,6 +151,7 @@
     "ch": 11,
     "num": 68
    },
+   "alternates": [{"msg": "cc", "ch": 11, "num": 30, "shift": true}],
    "led": true
   },
   {
@@ -152,6 +163,7 @@
     "ch": 12,
     "num": 69
    },
+   "alternates": [{"msg": "cc", "ch": 12, "num": 31, "shift": true}],
    "led": true
   },
   {
@@ -163,6 +175,7 @@
     "ch": 13,
     "num": 70
    },
+   "alternates": [{"msg": "cc", "ch": 13, "num": 32, "shift": true}],
    "led": true
   },
   {
@@ -174,6 +187,7 @@
     "ch": 14,
     "num": 71
    },
+   "alternates": [{"msg": "cc", "ch": 14, "num": 33, "shift": true}],
    "led": true
   },
   {
@@ -185,6 +199,7 @@
     "ch": 15,
     "num": 72
    },
+   "alternates": [{"msg": "cc", "ch": 15, "num": 34, "shift": true}],
    "led": true
   },
   {
@@ -196,6 +211,7 @@
     "ch": 16,
     "num": 73
    },
+   "alternates": [{"msg": "cc", "ch": 16, "num": 35, "shift": true}],
    "led": true
   },
   {
@@ -353,7 +369,8 @@
     "ch": 13,
     "num": 78,
     "relative": "twos_complement"
-   }
+   },
+   "alternates": [{"msg": "cc", "ch": 13, "num": 41, "relative": "twos_complement", "shift": true}]
   },
   {
    "id": "encoder_push",
@@ -364,6 +381,7 @@
     "ch": 13,
     "num": 79
    },
+   "alternates": [{"msg": "cc", "ch": 13, "num": 42, "shift": true}],
    "led": true
   },
   {
@@ -419,7 +437,7 @@
     "ch": 3,
     "num": 51
    },
-   "note": "captured once; re-check"
+   "alternates": [{"msg": "cc", "ch": 2, "num": 12, "shift": true}]
   }
  ],
  "layout": {

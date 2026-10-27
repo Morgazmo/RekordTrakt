@@ -594,7 +594,9 @@ $("btn-pause").onclick = () => {
 };
 $("btn-clear").onclick = () => { events = []; renderAll(); };
 $("btn-export").onclick = () => {
-  const lines = events.filter((e) => e.kind === "binding" || visible(e)).map((e) => JSON.stringify(e)).join("\n");
+  // Controller captures must retain their source messages even when a display filter was switched off.
+  const lines = events.filter((e) => e.kind === "binding" || e.kind === "input" || e.kind === "unrecognised" || visible(e))
+    .map((e) => JSON.stringify(e)).join("\n");
   const blob = new Blob([lines + "\n"], { type: "application/x-ndjson" });
   const a = document.createElement("a");
   const d = new Date(), pad = (n) => String(n).padStart(2, "0");

@@ -220,6 +220,13 @@ class Ownership(unittest.TestCase):
         self.hold("L.hotcue_1", HOTCUE_1)
         self.m.tap(L, HOTCUE_2)
         self.assertEqual(self.m.r.sent(), [("Cue", 1, 127)])
+        self.assertTrue(any("Skipped Cue deck 1" in n for n in self.m.r.notices))
+
+    def test_duplicate_group_targets_balance_to_one_press_and_release(self):
+        self.m.e.set_binding("x1_left", "base", None, "L.hotcue_2", {"do": "functions", "items": [
+            self.m.fn("Cue"), self.m.fn("Cue")]})
+        self.m.tap(L, HOTCUE_2)
+        self.assertEqual(self.m.r.sent(), [("Cue", 1, 127), ("Cue", 1, 0)])
 
     def sequence(self):
         self.m.e.set_binding("x1_left", "base", None, "L.hotcue_2", {"do": "sequence", "steps": [
@@ -282,6 +289,19 @@ class Saving(unittest.TestCase):
         self.assertEqual(layers["base"]["preset"]["label"], "Hot cue A")
         self.assertEqual(layers["shift"]["mine"]["function"], "CallPrev")
         self.assertEqual(info["kind"], "button")
+
+    def test_f1_only_offers_page_two_for_controls_with_a_second_address(self):
+        m = Mapped()
+        self.assertEqual([x["layer"] for x in m.e.control_info("f1_left", "pad_1")["layers"]],
+                         ["base", "shift"])
+        self.assertEqual([x["layer"] for x in m.e.control_info("f1_left", "knob_1")["layers"]], ["base"])
+        with self.assertRaises(ValueError):
+            m.e.set_binding("f1_left", "shift", None, "knob_1", m.fn("EQHigh", deck="a"))
+
+        m.e.set_binding("f1_left", "shift", None, "pad_1", m.fn("CallPrev", deck="a"))
+        m.r.msg("f1_left", 0xB0, 0x14, 0x7F)
+        m.r.msg("f1_left", 0xB0, 0x14, 0)
+        self.assertEqual(m.r.sent(), [("CallPrev", 1, 127), ("CallPrev", 1, 0)])
 
 
 if __name__ == "__main__":

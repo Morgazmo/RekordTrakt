@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check Python sources
+        run: python -m compileall -q rekordtrakt installer
+      - name: Test engine and installer logic
+        run: python -m unittest discover -s tests
+      - name: Check browser scripts
+        shell: pwsh
+        run: Get-ChildItem rekordtrakt/shell/web/js/*.js | ForEach-Object { node --check $_.FullName }
+      - name: Test controller window in Chrome or Edge
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node --test tests/browser.mjs

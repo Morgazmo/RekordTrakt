@@ -86,11 +86,22 @@ def midi_devices(midi, rig):
         elif any(h.upper() in name.upper() for h in PIONEER_HINTS):
             out.append({"port": name, "status": "rekordbox", "text": "Rekordbox works with it directly"})
         else:
-            match = next((dev for dev in (make() for make in DEVICE_TYPES.values())
-                          if any(h.lower() in name.lower() for h in dev.definition.get("port_hints", []))), None)
+            matches = []
+            for dev in (make() for make in DEVICE_TYPES.values()):
+                definition = dev.definition
+                if any(x.lower() in name.lower() for x in definition.get("port_excludes", [])):
+                    continue
+                hints = [h for h in definition.get("port_hints", []) if h.lower() in name.lower()]
+                if hints:
+                    matches.append((max(map(len, hints)), dev))
+            match = max(matches, key=lambda item: item[0])[1] if matches else None
             if match:
-                out.append({"port": name, "status": "supported", "type": match.type_name,
-                            "text": f"{match.display_name}: add it to use it"})
+                midi_status = (match.definition.get("midi") or {}).get("status", "verified")
+                status = "layout" if midi_status == "capture_required" else "supported"
+                text = (f"{match.display_name}: layout ready; learn its inputs" if status == "layout" else
+                        f"{match.display_name}: add it to use it")
+                out.append({"port": name, "status": status, "type": match.type_name,
+                            "midi_status": midi_status, "text": text})
             else:
                 out.append({"port": name, "status": "unknown", "text": "Import a mapping file for it to use it"})
     return out
@@ -112,6 +123,7 @@ def settings_actions(translator):
         "page": lambda body: translator().set_page(body["position"], body["half"], body["page"]),
         "rename": lambda body: translator().rename(body["position"], body["name"]),
         "shift-latch": lambda body: translator().set_shift_latch(body["position"], bool(body.get("on"))),
+        "device-test": lambda body: translator().set_device_test(body["position"], bool(body.get("on"))),
         # your own mapping (the mapping editor)
         "control-info": lambda body: translator().control_info(body["position"], body["control"], body.get("page")),
         "binding": lambda body: translator().set_binding(body["position"], body["layer"], body.get("page"),

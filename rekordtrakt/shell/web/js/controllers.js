@@ -1,14 +1,19 @@
 // The Controllers tab. Each card is built once from its device definition's layout; after that every view update
 // only changes text, classes and knob positions in place. So nothing flashes, a held mouse button keeps its control
 // pressed while the labels change around it, and the mapping editor can point at a control that stays put.
-import { $, app, change, el, emit, get, icon, post, store, toast } from "./core.js";
+import { $, TOKEN, app, change, el, emit, get, icon, post, store, toast } from "./core.js";
 
 const DECK_VAR = (d) => `var(--d${d || 1})`;
 const cards = new Map();                                // position -> card
-const locks = store.get("rt-device-locks", {});        // position -> true when its on-screen controls are locked
+// Only an explicit unlock enables screen input. A new device (or unavailable storage) stays locked.
+const savedLocks = store.get("rt-device-locks", {});
+const locks = savedLocks && typeof savedLocks === "object" && !Array.isArray(savedLocks) ? savedLocks : {};
+// position -> false when explicitly unlocked
 const editing = new Set(store.get("rt-editing", []));  // positions in edit mode: a click opens the editor
 const held = new Map();                                 // "position|control" -> element, presses in progress
 let renaming = false;
+let learning = null;                                    // {position, control, saving}: hardware MIDI learn
+let learnStream = null;
 
 export function isEditing(position) { return editing.has(position); }
 export function setEditing(position, on) {
@@ -29,9 +34,59 @@ export function releaseAll() {
 }
 window.addEventListener("blur", () => { if (held.size) releaseAll(); });
 document.addEventListener("visibilitychange", () => { if (document.hidden && held.size) releaseAll(); });
-window.addEventListener("pagehide", () => { if (held.size) releaseAll(); });
+window.addEventListener("pagehide", () => {
+  if (held.size) releaseAll();
+  if (learning) stopLearning(true);
+});
 
-const usable = (card) => !locks[card.position] && !editing.has(card.position);
+const isLocked = (position) => locks[position] !== false;
+const usable = (card) => !isLocked(card.position) && !editing.has(card.position) && learning?.position !== card.position;
+
+function stopLearning(keepalive = false) {
+  const previous = learning;
+  learning = null;
+  if (learnStream) { learnStream.close(); learnStream = null; }
+  if (previous && !previous.wasTesting)
+    post("device-test", { position: previous.position, on: false }, keepalive).catch(() => {});
+  renderControllers();
+}
+
+async function startLearning(position) {
+  if (learning?.position === position) return stopLearning();
+  if (learning) stopLearning();
+  editing.delete(position);
+  store.set("rt-editing", [...editing]);
+  releaseAll();
+  const wasTesting = !!cards.get(position)?.dev?.midi_test;
+  learning = { position, control: null, saving: false, wasTesting };
+  if (!wasTesting) {
+    try { await post("device-test", { position, on: true }); }
+    catch (e) { learning = null; toast(`Couldn't isolate the controller: ${e.message}`, true); return; }
+  }
+  learnStream = new EventSource(`/events?token=${encodeURIComponent(TOKEN)}&kinds=input,unrecognised`);
+  learnStream.onmessage = async (message) => {
+    if (!learning?.control || learning.saving) return;
+    const event = JSON.parse(message.data), raw = event.raw;
+    if (event.position !== learning.position || !Array.isArray(raw) || raw.length !== 3) return;
+    const def = cards.get(learning.position)?.def, meta = def?.controls?.[learning.control];
+    if (!meta) return;
+    const family = raw[0] & 0xF0;
+    if (meta.kind === "button" && ((family === 0x80) || raw[2] === 0)) return; // learn the press, not release
+    if (meta.kind !== "button" && family !== 0xB0) return;
+    learning.saving = true;
+    try {
+      const result = await post("device-learn", { position: learning.position, control: learning.control,
+        status: raw[0], data1: raw[1], data2: raw[2] });
+      const moved = result.moved?.length ? ` (taken from ${result.moved.join(", ")}: learn it again)` : "";
+      toast(`${meta.name} learned · ${result.mapped}/${result.controls}${moved}`);
+      learning.control = null;
+      setTimeout(() => emit("definitions"), 500);
+    } catch (e) { toast(e.message, true); }
+    finally { if (learning) learning.saving = false; renderControllers(); }
+  };
+  toast("MIDI Learn: click an on-screen control, then operate it on the hardware");
+  renderControllers();
+}
 
 function pressable(node, card, control) {
   node.addEventListener("pointerdown", (e) => {
@@ -228,6 +283,13 @@ function buildHead(card) {
     shiftBtn.onclick = () => change("shift-latch", { position: card.position, on: !card.dev.shift_latched }, null);
     head.appendChild(shiftBtn);
   }
+  const learn = el("button", "shiftbtn", "MIDI");
+  learn.onclick = () => startLearning(card.position);
+  head.appendChild(learn);
+  const test = el("button", "shiftbtn", "TEST");
+  test.onclick = () => change("device-test", { position: card.position, on: !card.dev.midi_test },
+    card.dev.midi_test ? "MIDI test finished" : "MIDI test: hardware actions are isolated from Rekordbox");
+  head.appendChild(test);
   const edit = el("button", "iconbtn");
   edit.appendChild(icon("pencil"));
   edit.onclick = () => {
@@ -239,8 +301,8 @@ function buildHead(card) {
   };
   const lock = el("button", "iconbtn");
   lock.onclick = () => {
-    locks[card.position] = !locks[card.position];
-    if (locks[card.position]) releaseAll();
+    locks[card.position] = !isLocked(card.position);
+    if (isLocked(card.position)) releaseAll();
     store.set("rt-device-locks", locks);
     update(card);
   };
@@ -248,20 +310,30 @@ function buildHead(card) {
   card.updaters.push((dev, st) => {
     dot.className = "dot " + (st.connected ? "ok" : "bad");
     if (!renaming || document.activeElement !== name) name.textContent = dev.name;
-    type.textContent = `${def.name}${st.connected ? "" : " · not connected"}`;
+    const confidence = { community: " · community MIDI", capture_required: " · inputs needed",
+      learned: " · learned MIDI" }[def.midi?.status] || "";
+    type.textContent = `${def.name}${confidence}${st.connected ? "" : " · not connected"}`;
     if (shiftBtn) {
       shiftBtn.classList.toggle("latched", !!dev.shift_latched);
       shiftBtn.classList.toggle("held", !dev.shift_latched && !!dev.shift_held);
       shiftBtn.setAttribute("aria-pressed", String(!!dev.shift_latched));
     }
     const ed = editing.has(card.position);
+    const lr = learning?.position === card.position;
+    learn.classList.toggle("latched", lr);
+    learn.textContent = lr ? "DONE" : "MIDI";
+    learn.title = lr ? "Finish learning hardware MIDI inputs" : "Learn or replace this controller's MIDI inputs";
+    test.classList.toggle("latched", !!dev.midi_test);
+    test.textContent = dev.midi_test ? "DONE" : "TEST";
+    test.title = dev.midi_test ? "Finish MIDI test" : "Test hardware inputs without sending actions to Rekordbox";
+    test.disabled = lr;
     edit.classList.toggle("editon", ed);
     edit.title = ed ? "Editing: click a control to change it. Click here to finish." : "Change what this controller's controls do";
     edit.setAttribute("aria-pressed", String(ed));
-    lock.replaceChildren(icon(locks[card.position] ? "lockShut" : "lockOpen"));
-    lock.classList.toggle("on", !!locks[card.position]);
-    lock.title = locks[card.position] ? "On-screen controls locked. Click to unlock." : "Lock this controller's on-screen controls";
-    lock.setAttribute("aria-label", locks[card.position] ? `Unlock ${dev.name}` : `Lock ${dev.name}`);
+    lock.replaceChildren(icon(isLocked(card.position) ? "lockShut" : "lockOpen"));
+    lock.classList.toggle("on", isLocked(card.position));
+    lock.title = isLocked(card.position) ? "On-screen controls locked. Click to unlock." : "Lock this controller's on-screen controls";
+    lock.setAttribute("aria-label", isLocked(card.position) ? `Unlock ${dev.name}` : `Lock ${dev.name}`);
   });
   return head;
 }
@@ -295,6 +367,15 @@ function buildCell(card, item, framed) {
 
   // In edit mode a click opens the editor: capture it before the control's own handlers see it.
   cell.addEventListener("pointerdown", (e) => {
+    if (e.button === 0 && learning?.position === card.position) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      learning.control = item.push && e.target.closest(".push") ? item.push : id;
+      const target = def.controls[learning.control];
+      toast(`Now operate ${target?.name || learning.control} on the hardware`);
+      update(card);
+      return;
+    }
     if (e.button !== 0 || !editing.has(card.position)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -335,6 +416,9 @@ function buildCell(card, item, framed) {
     cell.classList.toggle("live", usable(card));
     cell.classList.toggle("selected", !!(app.editTarget && app.editTarget.position === card.position
       && (app.editTarget.control === id || app.editTarget.control === item.push)));
+    cell.classList.toggle("learn-target", !!(learning && learning.position === card.position
+      && (learning.control === id || learning.control === item.push)));
+    cell.classList.toggle("midi-unmapped", meta.mapped === false);
     if (c && c.pickup != null && c.value != null && c.value !== c.pickup) {
       pick.hidden = false;
       pick.textContent = c.pickup > c.value ? "▲▲" : "▼▼";
@@ -383,7 +467,7 @@ function buildRole(card, item) {
 }
 
 function buildDeckHead(card, item) {
-  const { dev } = card;
+  const { dev, def } = card;
   const half0 = item.half ? dev.halves.find((h) => h.half === item.half) : dev.halves[0];
   const pages = dev.pages.length && half0 && half0.half;
   const box = placed(el("div", "deckhead" + (pages ? "" : " compact")), item);
@@ -412,6 +496,7 @@ function buildDeckHead(card, item) {
     });
   } else line.appendChild(fixed);
   const fx = el("span", "fxchip"), badge = el("span", "badge");
+  fx.hidden = !def.halves.length && !(def.fx_slots || []).length;
   line.append(fx, badge);
   box.appendChild(line);
   const tabs = el("div", "ptabs");
@@ -498,6 +583,7 @@ function update(card) {
   card.node.classList.toggle("offline", !st.connected);
   card.node.classList.toggle("shifted", shiftOn(dev));
   card.node.classList.toggle("editing", editing.has(card.position));
+  card.node.classList.toggle("learning", learning?.position === card.position);
   for (const fn of card.updaters) fn(dev, st);
 }
 

@@ -1,7 +1,7 @@
 // The mapping editor: what one control does, per layer (Normal, Shift, Sync held...) and FX-section page.
 // Right-click a control (or click it in edit mode) to open it. Saving applies at once: Rekordbox already has every
 // function, so nothing needs restarting.
-import { $, app, el, emit, get, icon, on, post, toast } from "./core.js";
+import { $, app, ask, el, emit, get, icon, on, post, toast } from "./core.js";
 
 let target = null;        // {position, control}
 let info = null;          // from the server: kind, page, layers [{layer, label, preset, mine}]
@@ -10,6 +10,9 @@ let draft = null;         // {do, items: [...]}
 let pickerFor = null;     // {index, field} while the function list is open
 let pickerQuery = "";
 let busy = false;
+let revision = 0;       // invalidates responses from an earlier control or a closed editor
+let closing = false;
+const drafts = new Map(); // unsaved edits survive control, layer and page switches until Save or Discard
 
 const KIND_NAMES = { button: "button", knob: "knob", fader: "fader", encoder: "encoder" };
 
@@ -20,49 +23,103 @@ async function functions() {
 function fnInfo(name) { return (app.functions ? app.functions.functions : []).find((f) => f.name === name); }
 
 export function setupEditor() {
-  $("ed-close").onclick = close;
-  $("ed-cancel").onclick = close;
+  $("ed-close").onclick = () => close();
+  $("ed-cancel").onclick = () => close();
   $("ed-save").onclick = save;
   $("ed-reset").onclick = () => saveAction(null);
   on("edit", ({ position, control }) => open(position, control));
-  on("edit-close", close);
+  on("edit-close", () => close());
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && target && !document.querySelector("dialog[open]")) close(); });
 }
 
 export async function open(position, control, page) {
+  stashDraft();
+  const previous = { target, info, draft };
+  const request = ++revision;
   target = { position, control };
+  info = null;
+  draft = null;
+  busy = false;
   app.editTarget = target;
   emit("render");
   $("editor").hidden = false;
   try {
     await functions();
-    info = await post("control-info", { position, control, page });
-  } catch (e) { toast(e.message, true); return close(); }
+    if (request !== revision) return;
+    const result = await post("control-info", { position, control, page });
+    if (request !== revision) return;
+    info = result;
+  } catch (e) {
+    if (request !== revision) return;
+    toast(e.message, true);
+    if (!previous.target) return finishClose();
+    ({ target, info, draft } = previous);
+    busy = false;
+    app.editTarget = target;
+    emit("render");
+    render();
+    return;
+  }
   if (!info.layers.some((l) => l.layer === layer)) layer = info.layers[0].layer;
   startDraft();
   render();
 }
 
-function close() {
+function draftKey() { return `${target.position}\u0000${target.control}\u0000${info.page || ""}\u0000${layer}`; }
+function stashDraft() {
+  if (target && info && draft) {
+    const entry = drafts.get(draftKey());
+    if (entry) entry.value = structuredClone(draft);
+  }
+}
+function finishClose() {
+  ++revision;
+  closing = false;
   target = null; info = null; pickerFor = null;
+  draft = null; busy = false;
+  drafts.clear();
   app.editTarget = null;
   $("editor").hidden = true;
   emit("render");
+}
+async function close() {
+  if (!target || closing) return;
+  if (busy) { toast("Wait for this mapping to finish saving"); return; }
+  closing = true;
+  stashDraft();
+  const request = revision;
+  if ([...drafts.values()].some((d) => JSON.stringify(d.value) !== d.original)) {
+    const discard = await ask({ title: "Discard unsaved mappings?", text: "Changes in this editor have not been saved.", ok: "Discard" });
+    if (request !== revision || !discard) { closing = false; return; }
+  }
+  finishClose();
 }
 
 function current() { return info.layers.find((l) => l.layer === layer); }
 
 function startDraft() {
+  const key = draftKey();
+  if (drafts.has(key)) {
+    draft = structuredClone(drafts.get(key).value);
+    pickerFor = null;
+    $("ed-err").textContent = "";
+    return;
+  }
   const mine = current().mine;
   pickerFor = null;
   $("ed-err").textContent = "";
-  if (!mine) { draft = { do: defaultDo(), items: [blankItem()] }; return; }
+  if (!mine) {
+    draft = { do: defaultDo(), items: [blankItem()] };
+    drafts.set(key, { value: structuredClone(draft), original: JSON.stringify(draft) });
+    return;
+  }
   const d = { do: mine.do, items: [] };
   if (mine.do === "function" || mine.do === "value") d.items = [{ ...mine }];
   else if (mine.do === "functions") d.items = (mine.items || []).map((x) => ({ ...x }));
   else if (mine.do === "sequence") d.items = (mine.steps || []).map((x) => ({ ...x }));
   if (!d.items.length) d.items = [blankItem()];
   draft = d;
+  drafts.set(key, { value: structuredClone(draft), original: JSON.stringify(draft) });
 }
 function defaultDo() { return "function"; }
 function blankItem() {
@@ -92,7 +149,7 @@ function deckOptions(scope) {
 
 // ---- drawing ---------------------------------------------------------------------------------------------------
 function render() {
-  if (!info) return;
+  if (!info || !target || !draft) return;
   const dev = app.view && app.view.devices.find((d) => d.position === target.position);
   const def = dev && app.defs[dev.type];
   const name = (def && def.controls[target.control] && def.controls[target.control].name) || target.control;
@@ -105,7 +162,8 @@ function render() {
   for (const l of info.layers) {
     const b = el("button", l.mine ? "has" : "", l.label);
     b.setAttribute("aria-pressed", String(l.layer === layer));
-    b.onclick = () => { layer = l.layer; startDraft(); render(); };
+    b.disabled = busy;
+    b.onclick = () => { stashDraft(); layer = l.layer; startDraft(); render(); };
     layers.appendChild(b);
   }
   body.appendChild(layers);
@@ -116,6 +174,7 @@ function render() {
     row.appendChild(el("span", "hint", "On the page"));
     const s = el("select");
     for (const p of dev.all_pages) s.appendChild(new Option(dev.page_names[p] || p, p, false, p === info.page));
+    s.disabled = busy;
     s.onchange = () => open(target.position, target.control, s.value);
     row.appendChild(s);
     body.appendChild(row);
@@ -164,6 +223,7 @@ function render() {
   }
   $("ed-reset").hidden = !l.mine;
   $("ed-save").disabled = busy;
+  $("ed-body").inert = busy;
 }
 
 function hint() {
@@ -348,15 +408,28 @@ function save() {
 }
 
 async function saveAction(action) {
+  if (!target || !info || busy) return;
+  const request = revision;
+  const savedTarget = { ...target }, savedLayer = layer, savedPage = info.page;
+  const savedKey = draftKey();
+  stashDraft();
+  const savedEntry = drafts.get(savedKey);
   busy = true;
   render();
   $("ed-err").textContent = "";
   try {
-    await post("binding", { position: target.position, layer, page: info.page, control: target.control, action });
+    await post("binding", { position: savedTarget.position, layer: savedLayer, page: savedPage,
+                             control: savedTarget.control, action });
+    if (drafts.get(savedKey) === savedEntry) drafts.delete(savedKey);
+    if (request !== revision) return;
     toast(action ? "Saved" : "Back to the preset");
-    info = await post("control-info", { position: target.position, control: target.control, page: info.page });
+    const result = await post("control-info", { position: savedTarget.position, control: savedTarget.control,
+                                                 page: savedPage });
+    if (request !== revision) return;
+    info = result;
     startDraft();
-  } catch (e) { $("ed-err").textContent = e.message; }
+  } catch (e) { if (request === revision) $("ed-err").textContent = e.message; }
+  if (request !== revision) return;
   busy = false;
   render();
 }

@@ -235,8 +235,11 @@ class Sequence(Behaviour):
 
             def run(step=step):
                 if self.started.get(key) == number and eng.still_on(token):
-                    step.press(eng, ctx)
-                    step.release(eng, ctx)
+                    if isinstance(step, Button):
+                        eng.tap(step.ref, ctx)     # reports a tap suppressed by another held control
+                    else:
+                        step.press(eng, ctx)
+                        step.release(eng, ctx)
             if due <= 0:
                 run()
             else:

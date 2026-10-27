@@ -89,6 +89,20 @@ class Import(unittest.TestCase):
         with self.assertRaises(mapping_file.MappingFileError):
             mapping_file.to_rekordtrakt("<html></html>")
 
+    def test_older_files_and_script_control_hints(self):
+        legacy = """<MixxxMIDIPreset schemaVersion="1"><info><name>Legacy X1</name></info><controller><controls>
+          <control><group>knobs</group><key>X1.knobs</key><status>0xb0</status><midino>0</midino>
+            <options><Script-Binding/></options></control>
+          <control><group>buttons</group><key>X1.buttons</key><status>0xb0</status><midino>8</midino>
+            <options><Script-Binding/></options></control>
+          <control><group>encoders</group><key>X1.encoders</key><status>0xb0</status><midino>16</midino>
+            <options><Script-Binding/></options></control>
+        </controls></controller></MixxxMIDIPreset>"""
+        definition, _, report = mapping_file.to_rekordtrakt(legacy)
+        self.assertEqual([c["kind"] for c in definition["controls"]], ["knob", "button", "encoder"])
+        self.assertEqual(definition["controls"][2]["in"]["relative"], "twos_complement")
+        self.assertEqual(report["mapped"], 0)       # the JavaScript is never run or guessed
+
     def test_the_window_never_names_other_software_as_a_source(self):
         # The import reads a file the user picks; the window doesn't suggest RekordTrakt depends on anyone's library.
         from rekordtrakt.shell.app import midi_devices
@@ -99,8 +113,20 @@ class Import(unittest.TestCase):
         texts = [d["text"] for d in midi_devices(Midi(), {"devices": {}, "bridge": {}})]
         web = Path(__file__).resolve().parents[1] / "rekordtrakt" / "shell" / "web"
         texts += [f.read_text(encoding="utf-8") for f in web.rglob("*") if f.suffix in (".js", ".html", ".css")]
+        texts += [json.dumps(make().public()) for make in DEVICE_TYPES.values()]   # what the window shows of each
         self.assertFalse([t for t in texts if "mixxx" in t.lower()])
         self.assertNotIn("mixxx", json.dumps(self.definition).lower())
+
+    def test_specific_x1_ports_are_not_mistaken_for_the_mk1(self):
+        from rekordtrakt.shell.app import midi_devices
+
+        class Midi:
+            def input_names(self):
+                return ["Traktor Kontrol X1 MK2", "Traktor Kontrol X1 MK3", "Traktor Kontrol X1"]
+
+        found = {d["port"]: d.get("type") for d in midi_devices(Midi(), {"devices": {}, "bridge": {}})}
+        self.assertEqual(found, {"Traktor Kontrol X1 MK2": "x1mk2", "Traktor Kontrol X1 MK3": "x1mk3",
+                                 "Traktor Kontrol X1": "x1mk1"})
 
 
 class AddingControllers(unittest.TestCase):
@@ -185,6 +211,49 @@ class AddingControllers(unittest.TestCase):
         self.setup.remove({"position": result["position"]})
         self.assertNotIn(result["position"], self.rig["devices"])
         self.assertEqual(len(self.restarts), 2)
+
+    def test_hardware_learn_clones_a_bundled_layout_and_keeps_its_profile(self):
+        position = self.setup.add({"port": "X1 MK2 Community Unit", "type": "x1mk2"})["position"]
+        first = self.setup.learn({"position": position, "control": "L.play",
+                                  "status": 0x90, "data1": 22, "data2": 127})
+        learned_type = first["type"]
+        self.assertTrue(learned_type.startswith("learned_x1mk2_"))
+        self.assertEqual((first["mapped"], first["controls"]), (1, 46))
+        self.assertEqual(self.rig["devices"][position]["profile"], "x1mk2")
+        saved = json.loads((self.folder / f"{learned_type}.json").read_text(encoding="utf-8"))
+        self.assertEqual(saved["template"], "x1mk2")
+        self.assertEqual(DEVICE_TYPES[learned_type]().decode(0x90, 22, 127).control, "L.play")
+
+        second = self.setup.learn({"position": position, "control": "L.loop",
+                                   "status": 0xB0, "data1": 23, "data2": 1})
+        self.assertEqual((second["type"], second["mapped"]), (learned_type, 2))
+        turn = DEVICE_TYPES[learned_type]().decode(0xB0, 23, 127)
+        self.assertEqual((turn.control, turn.value), ("L.loop", -1))
+
+    def test_hardware_learn_takes_a_message_from_the_control_a_community_map_gave_it(self):
+        position = self.setup.add({"port": "Traktor Kontrol X1", "type": "x1mk1"})["position"]
+        result = self.setup.learn({"position": position, "control": "L.play",
+                                   "status": 0xB0, "data1": 36, "data2": 127})      # the map says L.cue
+        self.assertEqual(result["moved"], ["Cue / Rel"])
+        dev = DEVICE_TYPES[result["type"]]()
+        self.assertEqual(dev.decode(0xB0, 36, 127).control, "L.play")
+        self.assertIsNone(dev.decode(0xB0, 36 + 44, 127))                         # L.cue's shifted message went too
+        self.assertFalse(dev.public()["controls"]["L.cue"]["mapped"])
+        self.assertEqual(result["mapped"], 43)
+
+    def test_hardware_learn_updates_a_running_translator_without_a_restart(self):
+        position = self.setup.add({"port": "AFX Community Unit", "type": "akai_afx"})["position"]
+        applied = []
+
+        class LiveTranslator:
+            def replace_device_definition(inner, pos, definition):
+                applied.append((pos, definition))
+
+        self.setup.supervisor.translator = LiveTranslator()
+        self.setup.learn({"position": position, "control": "pad_1",
+                          "status": 0x90, "data1": 36, "data2": 127})
+        self.assertEqual(len(self.restarts), 1)        # adding restarted; learning did not
+        self.assertEqual((applied[0][0], applied[0][1]["template"]), (position, "akai_afx"))
 
 
 if __name__ == "__main__":

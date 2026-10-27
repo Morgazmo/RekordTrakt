@@ -143,6 +143,8 @@ class Engine:
         self.state = State(clock)
         self.held = {}                        # (position, control) -> (behaviour, ctx)
         self.down = {}                        # (position, control) -> {"shift", "source"}: pressed right now
+        self.test_positions = set()            # devices monitored without executing their hardware bindings
+        self.test_values = {}                  # latest absolute hardware value while Device Test isolates output
         self.modifiers = {}                   # (position, half) -> {name: {"since": t, "used": bool}}
         self.combos = {}                      # (position, half) -> {"names": set, "since": t, "used": bool}
         self.shared = {}                      # state shared between controls/devices (Part FX group, browser focus)
@@ -176,11 +178,17 @@ class Engine:
             return kinds()
         return {c: {"press": "button", "value": "knob", "turn": "encoder"}[k] for c, k in dev.device.controls()}
 
-    def edit_layers(self, dev):
+    def edit_layers(self, dev, control=None):
         profile = self.profile(dev)
-        if profile.edit_layers:
-            return list(profile.edit_layers)
-        return [("base", "Normal")] + ([("shift", "Shift")] if getattr(dev.device, "has_shift", False) else [])
+        layers = (list(profile.edit_layers) if profile.edit_layers else
+                  [("base", "Normal")] + ([("shift", "Shift")] if getattr(dev.device, "has_shift", False) else []))
+        # A definition can mark only some alternate MIDI messages as shifted. The F1's second hardware page does
+        # this: its pads, Sync and encoder change address, while its knobs and faders do not. Do not offer a layer
+        # that the selected physical control can never reach.
+        supports = getattr(dev.device, "supports_shift", None)
+        if control is not None and callable(supports) and not supports(control):
+            layers = [(name, label) for name, label in layers if name != "shift"]
+        return layers
 
     def _compile_mapping(self, dev):
         self.cancel_waiting(dev.position)     # steps from bindings that are about to be replaced
@@ -203,7 +211,7 @@ class Engine:
         kinds = self.control_kinds(dev)
         if control not in kinds:
             raise ValueError(f"{dev.name} has no control '{control}'")
-        if layer not in [name for name, _ in self.edit_layers(dev)]:
+        if layer not in [name for name, _ in self.edit_layers(dev, control)]:
             raise ValueError(f"{dev.name} has no '{layer}' layer to edit")
         if page is not None and page not in self.pages(dev, enabled_only=False):
             raise ValueError(f"no page '{page}'")
@@ -275,7 +283,7 @@ class Engine:
         page = (page or dev.modes.get(half, {}).get("page")) if page_bound else None
         ctx = dev.context(half)
         layers = []
-        for layer, label in self.edit_layers(dev):
+        for layer, label in self.edit_layers(dev, control):
             mine = next((e["action"] for e in dev.mapping["bindings"] if e.get("layer") == layer
                          and e.get("page") == page and e.get("control") == control), None)
             preset = None
@@ -334,7 +342,9 @@ class Engine:
                     value=text, raw=raw, position=ctx.get("_pos"), half=ctx.get("_half"),
                     bypassed=getattr(self.bridge, "bypassed", False))
         try:
-            getattr(self.bridge, verb)(f, d, *args)
+            sent = getattr(self.bridge, verb)(f, d, *args)
+            if verb == "tap" and sent is False:
+                self.notice(f"Skipped {f}{f' deck {d}' if d else ''}: another control is holding it")
         except KeyError:                        # not in Rekordbox's (older) bridge mapping: say so once, carry on
             if (f, d) not in self.not_in_bridge:
                 self.not_in_bridge.add((f, d))
@@ -428,6 +438,13 @@ class Engine:
                     position=ev.position, control=ev.control, action=ev.kind, value=ev.value, shift=ev.shift,
                     modifiers=sorted(mods), raw=list(raw) if raw else None)
 
+        # Device Test stops after decoding and updating the view. Controls animate and Debug keeps the raw
+        # messages, but a community tester cannot accidentally operate Rekordbox while checking a map.
+        if ev.source == "hw" and ev.position in self.test_positions:
+            if ev.kind == VALUE:
+                self.test_values[(ev.position, ev.control)] = ev.value
+            return
+
         if ev.kind == RELEASE:
             binding = self.held.pop((ev.position, ev.control, ev.source), None)
             if binding:
@@ -487,6 +504,48 @@ class Engine:
         self.view_version += 1
         self.notice(f"{dev.name}: Shift {'latched' if on else 'released'}")
         self.refresh_leds(position)
+
+    def set_device_test(self, position, on):
+        """Monitor one controller without executing its hardware bindings."""
+        if position not in self.devices:
+            raise ValueError(f"no controller '{position}'")
+        on = bool(on)
+        if on:
+            # Finish anything pressed before isolation begins, then suppress subsequent hardware input.
+            for p, control, source in [k for k in self.held if k[0] == position and k[2] == "hw"]:
+                self.handle(Event(p, control, RELEASE, 0, False, source))
+            self.cancel_waiting(position)
+            self.test_positions.add(position)
+        else:
+            self.test_positions.discard(position)
+            for key in [k for k in self.test_values if k[0] == position]:
+                self.test_values.pop(key, None)
+            for key in [k for k in self.down if k[0] == position]:
+                self.down.pop(key, None)
+        self.view_version += 1
+        self.notice(f"{self.devices[position].name}: MIDI test {'on' if on else 'off'}")
+
+    def replace_device_definition(self, position, device, profile=None):
+        """Adopt newly learned addresses without reopening the MIDI port or restarting the translator."""
+        dev = self.devices.get(position)
+        if dev is None:
+            raise ValueError(f"no controller '{position}'")
+        if (dev.device.has_halves != device.has_halves or dev.device.controls() != device.controls() or
+                list(dev.deck_slots()) != list(getattr(device, "deck_slots", ())) or
+                list(dev.fx_slots()) != list(getattr(device, "fx_slots", ()))):
+            raise ValueError("a learned definition may change MIDI addresses, not the controller's controls or slots")
+        if self.leds and position in self.leds.devices:
+            self.leds.all_off(position)
+            _, output, _ = self.leds.devices[position]
+            self.leds.devices[position] = (device, output, device.led_interval)
+        dev.device = device
+        if profile and not dev.profile:
+            dev.profile = profile             # a learned type keeps the bundled template's preset underneath
+        self._compile_mapping(dev)
+        self._rebuild_led_sources()
+        if self.leds:
+            self.refresh_leds(position)
+        self.view_version += 1
 
     def rename(self, position, name):
         dev = self.devices[position]
@@ -658,6 +717,7 @@ class Engine:
         led_names = set(dev.device.led_controls())
         out = {"position": dev.position, "name": dev.name or dev.position, "type": dev.device.type_name,
                "shift_latched": dev.shift_latched,
+               "midi_test": dev.position in self.test_positions,
                # The X1's Shift sends nothing alone, but a press made with it arrives shifted: Shift is down then.
                "shift_held": any(v["shift"] for (p, _), v in self.down.items() if p == dev.position),
                "type_name": getattr(dev.device, "display_name", dev.device.type_name),
@@ -708,7 +768,8 @@ class Engine:
             c["short"] = short(behaviour, self, ctx)
             c["layer"] = layer
             c["disabled"] = c["label"] == "—"
-        if getattr(dev.device, "has_shift", False):
+        supports_shift = getattr(dev.device, "supports_shift", None)
+        if getattr(dev.device, "has_shift", False) or callable(supports_shift) and supports_shift(name):
             shifted, shift_layer = self._resolve(profile, dev, half, base, Event(dev.position, name, kind, 0, True), mods)
             if shifted is not None and shifted is not behaviour:
                 label = describe(shifted, self, ctx, profile.modifier_names)[0]
@@ -728,6 +789,8 @@ class Engine:
         state = self.knob_state.get((dev.position, name))
         if state:
             c["value"] = state[2]
+        if dev.position in self.test_positions and (dev.position, name) in self.test_values:
+            c["value"] = self.test_values[(dev.position, name)]
         target = self._knob_target(behaviour, ctx)
         if target:
             c["default"] = knob_default(target[0])
